@@ -19,7 +19,7 @@ module "ipv-authorize" {
     IPV_AUTHORISATION_CALLBACK_URI = var.ipv_authorisation_callback_uri
     IPV_AUTHORISATION_CLIENT_ID    = var.ipv_authorisation_client_id
   }
-  handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.IPVAuthorisationHandler::handleRequest"
+  handler_function_name = "uk.gov.di.authentication.ipv.lambda.IPVAuthorisationHandler::handleRequest"
 
   create_endpoint                        = true
   rest_api_id                            = aws_api_gateway_rest_api.di_authentication_frontend_api.id
