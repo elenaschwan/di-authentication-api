@@ -40,7 +40,9 @@ resource "aws_elasticache_replication_group" "sessions_store" {
   apply_immediately          = true
 
   subnet_group_name  = aws_elasticache_subnet_group.sessions_store[0].name
-  security_group_ids = [aws_vpc.authentication.default_security_group_id]
+  security_group_ids = [
+    aws_security_group.redis_security_group.id,
+  ]
 
   lifecycle {
     ignore_changes = [

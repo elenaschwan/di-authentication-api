@@ -40,7 +40,8 @@ resource "aws_vpc_endpoint" "sqs" {
   subnet_ids = aws_subnet.authentication.*.id
 
   security_group_ids = [
-    aws_vpc.authentication.default_security_group_id
+    aws_vpc.authentication.default_security_group_id,
+    aws_security_group.allow_vpc_resources_only.id,
   ]
 
   private_dns_enabled = true
@@ -233,6 +234,12 @@ resource "aws_security_group" "allow_vpc_resources_only" {
   vpc_id      = aws_vpc.authentication.id
 }
 
+resource "aws_security_group" "redis_security_group" {
+  name_prefix = "${var.environment}-redis-security-group"
+  description = "Allow ingress to Redis. Use on Elasticache clusters only"
+  vpc_id      = aws_vpc.authentication.id
+}
+
 resource "aws_security_group" "allow_egress" {
   name_prefix = "${var.environment}-allow-egress"
   description = "Allow egress to external services"
@@ -240,7 +247,7 @@ resource "aws_security_group" "allow_egress" {
 }
 
 resource "aws_security_group_rule" "allow_incoming_redis_from_vpc" {
-  security_group_id = aws_security_group.allow_vpc_resources_only.id
+  security_group_id = aws_security_group.redis_security_group.id
 
   from_port                = 6379
   protocol                 = "tcp"
@@ -284,7 +291,7 @@ resource "aws_security_group_rule" "allow_redis_to_vpc" {
 
   from_port                = 6379
   protocol                 = "tcp"
-  source_security_group_id = aws_security_group.allow_vpc_resources_only.id
+  source_security_group_id = aws_security_group.redis_security_group.id
   to_port                  = 6379
   type                     = "egress"
 }
