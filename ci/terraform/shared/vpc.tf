@@ -75,6 +75,64 @@ resource "aws_vpc_endpoint_route_table_association" "dynamodb" {
   route_table_id = aws_route_table.private_route_table[count.index].id
 }
 
+data "aws_vpc_endpoint_service" "sns" {
+  count   = var.use_localstack ? 0 : 1
+  service = "sns"
+}
+
+resource "aws_vpc_endpoint" "sns" {
+  count = var.use_localstack ? 0 : 1
+
+  vpc_endpoint_type = "Interface"
+  vpc_id            = aws_vpc.authentication.id
+  service_name      = data.aws_vpc_endpoint_service.sns[0].service_name
+
+  subnet_ids = aws_subnet.authentication.*.id
+
+  security_group_ids = [
+    aws_vpc.authentication.default_security_group_id,
+    aws_security_group.allow_vpc_resources_only.id,
+  ]
+
+  private_dns_enabled = true
+
+  depends_on = [
+    aws_vpc.authentication,
+    aws_subnet.authentication,
+  ]
+
+  tags = local.default_tags
+}
+
+data "aws_vpc_endpoint_service" "kms" {
+  count   = var.use_localstack ? 0 : 1
+  service = "kms"
+}
+
+resource "aws_vpc_endpoint" "kms" {
+  count = var.use_localstack ? 0 : 1
+
+  vpc_endpoint_type = "Interface"
+  vpc_id            = aws_vpc.authentication.id
+  service_name      = data.aws_vpc_endpoint_service.kms[0].service_name
+
+  subnet_ids = aws_subnet.authentication.*.id
+
+  security_group_ids = [
+    aws_vpc.authentication.default_security_group_id,
+    aws_security_group.allow_vpc_resources_only.id,
+  ]
+
+  private_dns_enabled = true
+
+  depends_on = [
+    aws_vpc.authentication,
+    aws_subnet.authentication,
+  ]
+
+  tags = local.default_tags
+}
+
 resource "aws_subnet" "authentication_public" {
   count             = var.use_localstack ? 0 : length(data.aws_availability_zones.available.names)
   vpc_id            = aws_vpc.authentication.id
@@ -167,4 +225,76 @@ resource "aws_route" "private_to_internet" {
     aws_route_table.private_route_table,
     aws_route_table_association.private,
   ]
+}
+
+resource "aws_security_group" "allow_vpc_resources_only" {
+  name_prefix = "${var.environment}-allow-vpc-access-only"
+  description = "Allow access to Redis, SQS and Dynamo but no egress"
+  vpc_id      = aws_vpc.authentication.id
+}
+
+resource "aws_security_group" "allow_egress" {
+  name_prefix = "${var.environment}-allow-egress"
+  description = "Allow egress to external services"
+  vpc_id      = aws_vpc.authentication.id
+}
+
+resource "aws_security_group_rule" "allow_incoming_redis_from_vpc" {
+  security_group_id = aws_security_group.allow_vpc_resources_only.id
+
+  from_port                = 6379
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.allow_vpc_resources_only.id
+  to_port                  = 6379
+  type                     = "ingress"
+}
+
+resource "aws_security_group_rule" "allow_incoming_https_from_vpc" {
+  security_group_id = aws_security_group.allow_vpc_resources_only.id
+
+  from_port                = 443
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.allow_vpc_resources_only.id
+  to_port                  = 443
+  type                     = "ingress"
+}
+
+resource "aws_security_group_rule" "allow_https_to_vpc" {
+  security_group_id = aws_security_group.allow_vpc_resources_only.id
+
+  from_port                = 443
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.allow_vpc_resources_only.id
+  to_port                  = 443
+  type                     = "egress"
+}
+
+resource "aws_security_group_rule" "allow_https_to_dynamo" {
+  security_group_id = aws_security_group.allow_vpc_resources_only.id
+
+  from_port                = 443
+  prefix_list_ids          = [aws_vpc_endpoint.dynamodb[0].prefix_list_id]
+  protocol                 = "tcp"
+  to_port                  = 443
+  type                     = "egress"
+}
+
+resource "aws_security_group_rule" "allow_redis_to_vpc" {
+  security_group_id = aws_security_group.allow_vpc_resources_only.id
+
+  from_port                = 6379
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.allow_vpc_resources_only.id
+  to_port                  = 6379
+  type                     = "egress"
+}
+
+resource "aws_security_group_rule" "allow_https_to_anywhere" {
+  security_group_id = aws_security_group.allow_egress.id
+
+  cidr_blocks              = ["0.0.0.0/0"]
+  from_port                = 443
+  protocol                 = "tcp"
+  to_port                  = 443
+  type                     = "egress"
 }
