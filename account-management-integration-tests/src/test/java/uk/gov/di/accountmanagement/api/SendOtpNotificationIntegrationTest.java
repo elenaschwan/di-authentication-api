@@ -21,9 +21,17 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+
+    private static final String TEST_EMAIL = "joe.bloggs+3@digital.cabinet-office.gov.uk";
+    private static final String TEST_PHONE_NUMBER =
+            Long.toString(
+                    PhoneNumberUtil.getInstance()
+                            .getExampleNumberForType("GB", MOBILE)
+                            .getNationalNumber());
 
     @BeforeEach
     void setup() {
@@ -32,13 +40,11 @@ public class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegra
 
     @Test
     public void shouldSendNotificationAndReturn204ForVerifyEmailRequest() {
-        String email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
-        String phoneNumber =
-                PhoneNumberUtil.getInstance().getExampleNumberForType("GB", MOBILE).toString();
-
         var response =
                 makeRequest(
-                        Optional.of(new SendNotificationRequest(email, VERIFY_EMAIL, phoneNumber)),
+                        Optional.of(
+                                new SendNotificationRequest(
+                                        TEST_EMAIL, VERIFY_EMAIL, TEST_PHONE_NUMBER)),
                         Collections.emptyMap(),
                         Collections.emptyMap());
 
@@ -47,26 +53,37 @@ public class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegra
         List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
 
         assertThat(requests, hasSize(1));
-        assertThat(requests.get(0).getDestination(), equalTo(email));
+        assertThat(requests.get(0).getDestination(), equalTo(TEST_EMAIL));
         assertThat(requests.get(0).getNotificationType(), equalTo(VERIFY_EMAIL));
 
         assertEventTypesReceived(auditTopic, List.of(SEND_OTP));
     }
 
     @Test
-    public void shouldSendNotificationAndReturn204ForVerifyPhoneNumberRequest() {
-        String email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
-        String phoneNumber =
-                Long.toString(
-                        PhoneNumberUtil.getInstance()
-                                .getExampleNumberForType("GB", MOBILE)
-                                .getNationalNumber());
-
+    public void shouldReturn400ForVerifyEmailRequestWhenUserAlreadyExists() {
         var response =
                 makeRequest(
                         Optional.of(
                                 new SendNotificationRequest(
-                                        email, VERIFY_PHONE_NUMBER, phoneNumber)),
+                                        TEST_EMAIL, VERIFY_EMAIL, TEST_PHONE_NUMBER)),
+                        Collections.emptyMap(),
+                        Collections.emptyMap());
+
+        assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
+
+        List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
+        assertThat(requests, hasSize(0));
+
+        assertNoAuditEventsReceived(auditTopic);
+    }
+
+    @Test
+    public void shouldSendNotificationAndReturn204ForVerifyPhoneNumberRequest() {
+        var response =
+                makeRequest(
+                        Optional.of(
+                                new SendNotificationRequest(
+                                        TEST_EMAIL, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER)),
                         Collections.emptyMap(),
                         Collections.emptyMap());
 
@@ -75,9 +92,27 @@ public class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegra
         List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
 
         assertThat(requests, hasSize(1));
-        assertThat(requests.get(0).getDestination(), equalTo(phoneNumber));
+        assertThat(requests.get(0).getDestination(), equalTo(TEST_PHONE_NUMBER));
         assertThat(requests.get(0).getNotificationType(), equalTo(VERIFY_PHONE_NUMBER));
 
         assertEventTypesReceived(auditTopic, List.of(SEND_OTP));
+    }
+
+    @Test
+    public void shouldReturn400ForVerifyPhoneNumberRequestWhenUserDoesNotExist() {
+        var response =
+                makeRequest(
+                        Optional.of(
+                                new SendNotificationRequest(
+                                        TEST_EMAIL, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER)),
+                        Collections.emptyMap(),
+                        Collections.emptyMap());
+
+        assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
+
+        List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
+        assertThat(requests, hasSize(0));
+
+        assertNoAuditEventsReceived(auditTopic);
     }
 }
