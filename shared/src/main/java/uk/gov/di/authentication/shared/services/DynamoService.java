@@ -3,12 +3,13 @@ package uk.gov.di.authentication.shared.services;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression;
-import com.amazonaws.services.dynamodbv2.datamodeling.QueryResultPage;
+import com.amazonaws.services.dynamodbv2.datamodeling.*;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.amazonaws.services.dynamodbv2.model.Delete;
+import com.amazonaws.services.dynamodbv2.model.TransactWriteItem;
+import com.amazonaws.services.dynamodbv2.model.TransactWriteItemsRequest;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import uk.gov.di.authentication.shared.dynamo.UserProfileTableNameResolver;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
@@ -19,11 +20,7 @@ import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 import static java.lang.String.format;
 import static java.util.Objects.nonNull;
@@ -32,6 +29,8 @@ public class DynamoService implements AuthenticationService {
 
     private final DynamoDBMapper userCredentialsMapper;
     private final DynamoDBMapper userProfileMapper;
+    private String environment;
+
     private static final String USER_CREDENTIALS_TABLE = "user-credentials";
     private static final String USER_PROFILE_TABLE = "user-profile";
     private final AmazonDynamoDB dynamoDB;
@@ -62,13 +61,16 @@ public class DynamoService implements AuthenticationService {
                                         environment + "-" + USER_CREDENTIALS_TABLE))
                         .build();
         DynamoDBMapperConfig userProfileConfig =
-                new DynamoDBMapperConfig.Builder()
-                        .withTableNameOverride(
-                                DynamoDBMapperConfig.TableNameOverride.withTableNameReplacement(
-                                        environment + "-" + USER_PROFILE_TABLE))
-                        .build();
+                new DynamoDBMapperConfig.Builder().withTableNameResolver(new UserProfileTableNameResolver(environment)).build();
+//                DynamoDBMapperConfig userProfileConfig =
+//                new DynamoDBMapperConfig.Builder()
+//                        .withTableNameOverride(
+//                                DynamoDBMapperConfig.TableNameOverride.withTableNameReplacement(
+//                                        environment + "-" + USER_PROFILE_TABLE))
+//                        .build();
         this.userCredentialsMapper = new DynamoDBMapper(dynamoDB, userCredentialsConfig);
         this.userProfileMapper = new DynamoDBMapper(dynamoDB, userProfileConfig);
+        this.environment = environment;
         warmUp(environment + "-" + USER_PROFILE_TABLE);
     }
 
@@ -185,10 +187,22 @@ public class DynamoService implements AuthenticationService {
 
     @Override
     public void removeAccount(String email) {
-        userProfileMapper.delete(
-                userProfileMapper.load(UserProfile.class, email.toLowerCase(Locale.ROOT)));
-        userCredentialsMapper.delete(
-                userCredentialsMapper.load(UserCredentials.class, email.toLowerCase(Locale.ROOT)));
+
+        Delete userProfileDelete = new Delete().withTableName(environment + "-" + USER_PROFILE_TABLE).withKey(
+                Map.of("Email", new AttributeValue(email.toLowerCase(Locale.ROOT))));
+
+        Delete userCredentialsDelete = new Delete().withTableName(environment + "-" + USER_CREDENTIALS_TABLE).withKey(
+                Map.of("Email", new AttributeValue(email.toLowerCase(Locale.ROOT))));
+
+        Collection<TransactWriteItem> removeAccountActions = Arrays.asList(
+                new TransactWriteItem().withDelete(userProfileDelete),
+                new TransactWriteItem().withDelete(userCredentialsDelete));
+
+        TransactWriteItemsRequest createReservationTransaction = new TransactWriteItemsRequest()
+                .withTransactItems(removeAccountActions);
+
+        dynamoDB.transactWriteItems(createReservationTransaction);
+
     }
 
     @Override
