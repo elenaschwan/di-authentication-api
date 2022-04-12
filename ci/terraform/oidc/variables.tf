@@ -260,8 +260,3 @@ variable "spot_queue_url" {
   default = "undefined"
   type    = string
 }
-
-variable "ipv_auth_public_encryption_key" {
-  type    = string
-  default = "undefined"
-}
