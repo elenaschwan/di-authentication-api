@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.shared.services;
 
+import com.amazon.corretto.crypto.provider.AmazonCorrettoCryptoProvider;
 import com.amazonaws.services.kms.model.GetPublicKeyRequest;
 import com.amazonaws.services.kms.model.GetPublicKeyResult;
 import com.nimbusds.jose.Algorithm;
@@ -20,7 +21,6 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMException;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -44,6 +44,7 @@ public class TokenValidationService {
 
     public TokenValidationService(
             ConfigurationService configService, KmsConnectionService kmsConnectionService) {
+        com.amazon.corretto.crypto.provider.AmazonCorrettoCryptoProvider.install();
         this.configService = configService;
         this.kmsConnectionService = kmsConnectionService;
     }
@@ -142,10 +143,13 @@ public class TokenValidationService {
 
         try {
             return new JcaPEMKeyConverter()
-                    .setProvider(new BouncyCastleProvider())
+                    .setProvider(new AmazonCorrettoCryptoProvider())
                     .getPublicKey(subjectKeyInfo);
         } catch (PEMException e) {
             LOG.error("Error getting the PublicKey using the JcaPEMKeyConverter", e);
+
+            e.printStackTrace();
+
             throw new RuntimeException();
         }
     }

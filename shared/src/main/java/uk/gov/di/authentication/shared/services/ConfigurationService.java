@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.shared.services;
 
+import com.amazon.corretto.crypto.provider.AmazonCorrettoCryptoProvider;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagement;
 import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagementClient;
@@ -8,7 +9,6 @@ import com.amazonaws.services.simplesystemsmanagement.model.GetParametersRequest
 import com.amazonaws.services.simplesystemsmanagement.model.ParameterNotFoundException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.util.io.pem.PemReader;
 import uk.gov.di.authentication.shared.configuration.AuditPublisherConfiguration;
 import uk.gov.di.authentication.shared.configuration.BaseLambdaConfiguration;
@@ -34,6 +34,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public static ConfigurationService getInstance() {
         if (configurationService == null) {
+            com.amazon.corretto.crypto.provider.AmazonCorrettoCryptoProvider.install();
             configurationService = new ConfigurationService();
         }
         return configurationService;
@@ -421,7 +422,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
             var keySpec = new X509EncodedKeySpec(reader.readPemObject().getContent());
 
             return (ECPublicKey)
-                    KeyFactory.getInstance("EC", new BouncyCastleProvider())
+                    KeyFactory.getInstance("EC", new AmazonCorrettoCryptoProvider())
                             .generatePublic(keySpec);
         }
     }
