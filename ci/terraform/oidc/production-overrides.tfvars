@@ -19,6 +19,7 @@ ipv_backend_uri                = "https://api.identity.account.gov.uk"
 ipv_audience                   = "https://identity.account.gov.uk"
 ipv_sector                     = "https://identity.account.gov.uk"
 ipv_authorisation_client_id    = "authOrchestrator"
+use_robots_txt                 = false
 ipv_auth_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4K/6GH//FQSD6Yk/5nKY
