@@ -322,7 +322,9 @@ public class IPVCallbackHandler
                                                 userProfile.getPhoneNumber(),
                                                 persistentId);
                                     } else {
-                                        LOG.warn("SPOT will not be invoked. Returning Error to RP");
+                                        LOG.warn(
+                                                "SPOT will not be invoked. Returning code to RP: {}",
+                                                userIdentityError.get().toString());
                                         var errorResponse =
                                                 new AuthenticationErrorResponse(
                                                         authRequest.getRedirectionURI(),

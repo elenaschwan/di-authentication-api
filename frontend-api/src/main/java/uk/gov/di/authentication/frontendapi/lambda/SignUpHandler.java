@@ -102,7 +102,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                 passwordValidator.validate(request.getPassword());
 
         if (passwordValidationError.isEmpty()) {
-            LOG.info("No password validation errors found");
+            LOG.info("Password validation successful");
             if (authenticationService.userExists(request.getEmail())) {
 
                 auditService.submitAuditEvent(
