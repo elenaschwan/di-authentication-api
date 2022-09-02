@@ -92,7 +92,9 @@ class NotifyCallbackHandlerTest {
                                 "Environment",
                                 ENVIRONMENT,
                                 "NotifyStatus",
-                                status));
+                                status,
+                                "Language",
+                                "en"));
 
         assertThat(response, hasStatus(204));
     }
@@ -118,7 +120,9 @@ class NotifyCallbackHandlerTest {
                                 "Environment",
                                 ENVIRONMENT,
                                 "NotifyStatus",
-                                "delivered"));
+                                "delivered",
+                                "Language",
+                                "en"));
     }
 
     @Test

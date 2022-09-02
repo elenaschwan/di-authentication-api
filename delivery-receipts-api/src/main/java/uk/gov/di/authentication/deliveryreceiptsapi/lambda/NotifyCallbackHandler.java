@@ -61,6 +61,7 @@ public class NotifyCallbackHandler
         LOG.info("Received request");
         validateBearerToken(input.getHeaders());
         NotifyDeliveryReceipt deliveryReceipt;
+        DeliveryReceiptsNotificationType deliveryReceiptsNotificationType;
         try {
             deliveryReceipt = objectMapper.readValue(input.getBody(), NotifyDeliveryReceipt.class);
             if (deliveryReceipt.getNotificationType().equals("sms")) {
@@ -72,33 +73,41 @@ public class NotifyCallbackHandler
                         countryCode);
                 var templateId = deliveryReceipt.getTemplateId();
                 LOG.info("Template ID received in delivery receipt: {}", templateId);
-                var templateName = getTemplateName(templateId);
+                deliveryReceiptsNotificationType = getNotificationType(templateId);
                 cloudwatchMetricsService.incrementCounter(
                         "SmsSent",
                         Map.of(
                                 "SmsType",
-                                templateName,
+                                deliveryReceiptsNotificationType.getTemplateAlias(),
                                 "CountryCode",
                                 String.valueOf(countryCode),
                                 "Environment",
                                 configurationService.getEnvironment(),
                                 "NotifyStatus",
-                                deliveryReceipt.getStatus()));
+                                deliveryReceipt.getStatus(),
+                                "Language",
+                                deliveryReceiptsNotificationType
+                                        .getTemplateLanguage()
+                                        .getLanguage()));
                 LOG.info("SMS callback request processed");
             } else if (deliveryReceipt.getNotificationType().equals("email")) {
                 LOG.info("Email delivery receipt received");
                 var templateId = deliveryReceipt.getTemplateId();
                 LOG.info("Template ID received in delivery receipt: {}", templateId);
-                var templateName = getTemplateName(templateId);
+                deliveryReceiptsNotificationType = getNotificationType(templateId);
                 cloudwatchMetricsService.incrementCounter(
                         "EmailSent",
                         Map.of(
                                 "EmailName",
-                                templateName,
+                                deliveryReceiptsNotificationType.getTemplateAlias(),
                                 "Environment",
                                 configurationService.getEnvironment(),
                                 "NotifyStatus",
-                                deliveryReceipt.getStatus()));
+                                deliveryReceipt.getStatus(),
+                                "Language",
+                                deliveryReceiptsNotificationType
+                                        .getTemplateLanguage()
+                                        .getLanguage()));
                 LOG.info("Email callback request processed");
             }
         } catch (JsonException e) {
@@ -132,10 +141,9 @@ public class NotifyCallbackHandler
         }
     }
 
-    private String getTemplateName(String templateID) {
+    private DeliveryReceiptsNotificationType getNotificationType(String templateID) {
         return configurationService
                 .getNotificationTypeFromTemplateId(templateID)
-                .map(DeliveryReceiptsNotificationType::getTemplateAlias)
                 .orElseThrow(
                         () -> {
                             LOG.error("No template found with template ID: {}", templateID);
