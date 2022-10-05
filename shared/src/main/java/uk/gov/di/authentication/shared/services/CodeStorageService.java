@@ -119,6 +119,16 @@ public class CodeStorageService {
         }
     }
 
+    public void deleteBlockedForEmail(String email, String prefix) {
+        String encodedHash = HashHelper.hashSha256String(email);
+        String key = prefix + encodedHash;
+        try {
+            redisConnectionService.deleteValue(key);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public boolean isBlockedForEmail(String emailAddress, String prefix) {
         return redisConnectionService.getValue(prefix + HashHelper.hashSha256String(emailAddress))
                 != null;
