@@ -20,6 +20,7 @@ import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
@@ -43,6 +44,7 @@ import static uk.gov.di.authentication.shared.conditions.MfaHelper.getPrimaryMFA
 import static uk.gov.di.authentication.shared.entity.Session.AccountState.EXISTING;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 
 public class LoginHandler extends BaseFrontendHandler<LoginRequest>
@@ -106,6 +108,9 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             var persistentSessionId =
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
             var clientId = userContext.getClientId();
+            attachLogFieldToLogs(LogFieldName.CLIENT_ID, clientId);
+            attachLogFieldToLogs(LogFieldName.CLIENT_NAME, userContext.getClientName());
+            attachLogFieldToLogs(LogFieldName.ACCOUNT_STATE, userContext.getSession().isNewAccount().name());
             Optional<UserProfile> userProfileMaybe =
                     authenticationService.getUserProfileByEmailMaybe(request.getEmail());
             if (userProfileMaybe.isEmpty() || userContext.getUserCredentials().isEmpty()) {
@@ -194,6 +199,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             boolean mfaMethodVerified =
                     mfaMethod.map(MFAMethod::isMethodVerified).orElse(isPhoneNumberVerified);
 
+            attachLogFieldToLogs(LogFieldName.MFA_REQUIRED, String.valueOf(isMfaRequired));
+            attachLogFieldToLogs(LogFieldName.MFA_METHOD_TYPE, mfaMethodType.getValue());
             LOG.info("User has successfully logged in with MFAType: {}", mfaMethodType);
 
             auditService.submitAuditEvent(
