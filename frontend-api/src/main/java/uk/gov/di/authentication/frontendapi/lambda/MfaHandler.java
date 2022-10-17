@@ -11,7 +11,6 @@ import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
@@ -255,33 +254,5 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             return Optional.of(ErrorResponse.ERROR_1027);
         }
         return Optional.empty();
-    }
-
-    private boolean isTestClientAndAllowedEmail(
-            UserContext userContext, NotificationType notificationType)
-            throws ClientNotFoundException {
-        if (configurationService.isTestClientsEnabled()) {
-            LOG.warn("TestClients are ENABLED");
-        } else {
-            return false;
-        }
-        String emailAddress = userContext.getSession().getEmailAddress();
-        return userContext
-                .getClient()
-                .map(
-                        clientRegistry -> {
-                            if (clientRegistry.isTestClient()
-                                    && clientRegistry
-                                            .getTestClientEmailAllowlist()
-                                            .contains(emailAddress)) {
-                                LOG.info(
-                                        "MfaHandler not sending message with NotificationType {}",
-                                        notificationType);
-                                return true;
-                            } else {
-                                return false;
-                            }
-                        })
-                .orElseThrow(() -> new ClientNotFoundException(userContext.getSession()));
     }
 }

@@ -9,7 +9,9 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.BaseFrontendRequest;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -187,5 +189,33 @@ public abstract class BaseFrontendHandler<T>
         userContextBuilder.withUserLanguage(matchSupportedLanguage(userLanguage));
 
         return handleRequestWithUserContext(input, context, request, userContextBuilder.build());
+    }
+
+    protected boolean isTestClientAndAllowedEmail(
+            UserContext userContext, NotificationType notificationType)
+            throws ClientNotFoundException {
+        if (configurationService.isTestClientsEnabled()) {
+            LOG.warn("TestClients are ENABLED");
+        } else {
+            return false;
+        }
+        String emailAddress = userContext.getSession().getEmailAddress();
+        return userContext
+                .getClient()
+                .map(
+                        clientRegistry -> {
+                            if (clientRegistry.isTestClient()
+                                    && clientRegistry
+                                            .getTestClientEmailAllowlist()
+                                            .contains(emailAddress)) {
+                                LOG.info(
+                                        "TestClient not sending message with NotificationType {}",
+                                        notificationType);
+                                return true;
+                            } else {
+                                return false;
+                            }
+                        })
+                .orElseThrow(() -> new ClientNotFoundException(userContext.getSession()));
     }
 }
