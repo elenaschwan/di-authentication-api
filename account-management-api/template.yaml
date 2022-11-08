@@ -1,0 +1,122 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+  Environment:
+    Type: string
+    Default: build
+  VpcStackName:
+    Type: string
+  CodeSigningConfigArn:
+    Type: string
+  PermissionsBoundary:
+    Type: string
+  TestRoleArn:
+    Type: string
+  EmailQueueUrl:
+    Type: string
+    Default: foo
+  TokenSigningKeyAlias:
+    Type: string
+    Default: foo
+  TxmaAuditQueueUrl:
+    Type: string
+    Default: foo
+  RedisKey:
+    Type: string
+    Default: foo
+  BlockedEmailDuration:
+    Type: string
+    Default: foo
+  DefaultOtpCodeExpiry:
+    Type: string
+    Default: foo
+  EmailOtpAccountCreationCodeExpiry:
+    Type: string
+    Default: foo
+
+Globals:
+  Function:
+    CodeUri: .
+    Runtime: java11
+    CodeSigningConfigArn: !Ref CodeSigningConfigArn
+    PermissionsBoundary: !Ref PermissionsBoundary
+    Environment:
+      Variables:
+        ENVIRONMENT: !Ref Environment
+
+Resources:
+  Api:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Auth:
+        DefaultAuthorizer: AuthoriseAccessToken
+        Authorizers:
+          AuthoriseAccessToken:
+            FunctionArn: !GetAtt AuthoriseAccessTokenFunction.Arn
+  AuthenticateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: uk.gov.di.accountmanagement.lambda.AuthenticateHandler::handleRequest
+      Environment:
+        Variables:
+          TXMA_AUDIT_QUEUE_URL: !Ref TxmaAuditQueueUrl
+          REDIS_KEY: !Ref RedisKey
+  AuthoriseAccessTokenFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: uk.gov.di.accountmanagement.lambda.AuthoriseAccessTokenHandler::handleRequest
+      Environment:
+        Variables:
+          TOKEN_SIGNING_KEY_ALIAS: foo
+  NotificationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: uk.gov.di.accountmanagement.lambda.NotificationHandler::handleRequest
+  RemoveAccountFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: uk.gov.di.accountmanagement.lambda.RemoveAccountHandler::handleRequest
+      Environment:
+        Variables:
+          EMAIL_QUEUE_URL: !Ref EmailQueueUrl
+          TXMA_AUDIT_QUEUE_URL: !Ref TxmaAuditQueueUrl
+  SendOtpNotificationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: uk.gov.di.accountmanagement.lambda.SendOtpNotificationHandler::handleRequest
+      Environment:
+        Variables:
+          EMAIL_QUEUE_URL: !Ref EmailQueueUrl
+          REDIS_KEY: !Ref RedisKey
+          TXMA_AUDIT_QUEUE_URL: !Ref TxmaAuditQueueUrl
+          BLOCKED_EMAIL_DURATION: !Ref BlockedEmailDuration
+          DEFAULT_OTP_CODE_EXPIRY: !Ref DefaultOtpCodeExpiry
+          EMAIL_OTP_ACCOUNT_CREATION_CODE_EXPIRY: !Ref EmailOtpAccountCreationCodeExpiry
+  UpdateEmailFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: uk.gov.di.accountmanagement.lambda.UpdateEmailHandler::handleRequest
+      Environment:
+        Variables:
+          EMAIL_QUEUE_URL: !Ref EmailQueueUrl
+          REDIS_KEY: !Ref RedisKey
+          TXMA_AUDIT_QUEUE_URL: !Ref TxmaAuditQueueUrl
+  UpdatePasswordFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: uk.gov.di.accountmanagement.lambda.UpdatePasswordHandler::handleRequest
+      Environment:
+        Variables:
+          EMAIL_QUEUE_URL: !Ref EmailQueueUrl
+          TXMA_AUDIT_QUEUE_URL: !Ref TxmaAuditQueueUrl
+  UpdatePhoneNumberFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: uk.gov.di.accountmanagement.lambda.UpdatePhoneNumberHandler::handleRequest
+      Environment:
+        Variables:
+          EMAIL_QUEUE_URL: !Ref EmailQueueUrl
+          REDIS_KEY: !Ref RedisKey
+          TXMA_AUDIT_QUEUE_URL: !Ref TxmaAuditQueueUrl
