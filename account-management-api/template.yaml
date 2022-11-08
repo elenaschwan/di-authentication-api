@@ -63,6 +63,13 @@ Resources:
         Variables:
           TXMA_AUDIT_QUEUE_URL: !Ref TxmaAuditQueueUrl
           REDIS_KEY: !Ref RedisKey
+      Events:
+        Authenticate:
+          Type: Api
+          Parameters:
+            RestApiId: !Ref Api
+            Path: /authenticate
+            Method: POST
   AuthoriseAccessTokenFunction:
     Type: AWS::Serverless::Function
     Properties:
