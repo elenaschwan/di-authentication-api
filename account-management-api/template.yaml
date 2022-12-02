@@ -2,6 +2,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 
 Parameters:
+  # Provided by Secure Build Pipeline
   Environment:
     Type: string
     Default: build
@@ -13,27 +14,29 @@ Parameters:
     Type: string
   TestRoleArn:
     Type: string
+
+  # Application variables in SSM Parameter Store
   EmailQueueUrl:
-    Type: string
-    Default: foo
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /EmailQueueUrl
   TokenSigningKeyAlias:
-    Type: string
-    Default: foo
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /TokenSigningKeyAlias
   TxmaAuditQueueUrl:
-    Type: string
-    Default: foo
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /TxmaAuditQueueUrl
   RedisKey:
-    Type: string
-    Default: foo
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /RedisKey
   BlockedEmailDuration:
-    Type: string
-    Default: foo
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /BlockedEmailDuration
   DefaultOtpCodeExpiry:
-    Type: string
-    Default: foo
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /DefaultOtpCodeExpiry
   EmailOtpAccountCreationCodeExpiry:
-    Type: string
-    Default: foo
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /EmailOtpAccountCreationCodeExpiry
 
 Globals:
   Function:
