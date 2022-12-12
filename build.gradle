@@ -29,7 +29,8 @@ ext {
         nimbusds_jwt_version: "9.25.6",
         junit: "5.9.1",
         glassfish_version: "3.0.8",
-        xray: "2.12.0"
+        xray: "2.12.0",
+        yubico_webauthn: "2.0.0"
     ]
 
     terraformEnvironment = project.properties["terraformEnvironment"] ?: "localstack"
@@ -86,6 +87,7 @@ subprojects {
         tests
         test_runtime
         xray
+        yubico_webauthn
     }
 
     configurations.all {
@@ -159,6 +161,11 @@ subprojects {
                 "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-core:${dependencyVersions.xray}",
                 "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2:${dependencyVersions.xray}",
                 "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2-instrumentor:${dependencyVersions.xray}"
+
+        yubico_webauthn "com.yubico:webauthn-server-core:${dependencyVersions.yubico_webauthn}",
+                "com.yubico:webauthn-server-attestation:${dependencyVersions.yubico_webauthn}",
+                "com.yubico:yubico-util:${dependencyVersions.yubico_webauthn}"
+
     }
 }
 
