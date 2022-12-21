@@ -15,6 +15,8 @@ public class AuthCodeExchangeData {
     @SerializedName("clientSession")
     private ClientSession clientSession;
 
+    @Expose private String userLanguage;
+
     public String getClientSessionId() {
         return clientSessionId;
     }
@@ -39,6 +41,15 @@ public class AuthCodeExchangeData {
 
     public AuthCodeExchangeData setClientSession(ClientSession clientSession) {
         this.clientSession = clientSession;
+        return this;
+    }
+
+    public String getUserLanguage() {
+        return userLanguage;
+    }
+
+    public AuthCodeExchangeData setUserLanguage(String userLanguage) {
+        this.userLanguage = userLanguage;
         return this;
     }
 }

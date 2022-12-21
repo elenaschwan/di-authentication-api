@@ -23,6 +23,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -46,6 +47,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.addAnnotation;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
@@ -131,6 +133,10 @@ public class AuthCodeHandler
 
         LOG.info("Processing request");
 
+        var userLanguage =
+                getUserLanguageFromRequestHeaders(input.getHeaders(), configurationService)
+                        .orElse(SupportedLanguage.EN.getLanguage());
+
         AuthenticationRequest authenticationRequest;
         ClientSession clientSession;
         try {
@@ -182,7 +188,10 @@ public class AuthCodeHandler
             }
             var authCode =
                     authorisationCodeService.generateAuthorisationCode(
-                            clientSessionId, session.getEmailAddress(), clientSession);
+                            clientSessionId,
+                            session.getEmailAddress(),
+                            clientSession,
+                            userLanguage);
 
             var authenticationResponse =
                     authorizationService.generateSuccessfulAuthResponse(
