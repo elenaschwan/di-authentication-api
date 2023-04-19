@@ -16,3 +16,4 @@ build
 ci/terraform/**/*.plan
 logs/
 .vscode/
+*.DS_Store

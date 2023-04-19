@@ -114,7 +114,7 @@ public abstract class HandlerIntegrationTest<Q, S> {
                     docAppPrivateKeyJwtSigner,
                     configurationParameters);
 
-    protected static final ConfigurationService TXMA_ENABLED_CONFIGURATION_SERVICE =
+    public static final ConfigurationService TXMA_ENABLED_CONFIGURATION_SERVICE =
             new IntegrationTestConfigurationService(
                     auditTopic,
                     notificationsQueue,
@@ -140,7 +140,7 @@ public abstract class HandlerIntegrationTest<Q, S> {
             new RedisExtension(SerializationService.getInstance(), TEST_CONFIGURATION_SERVICE);
 
     @RegisterExtension
-    protected static final UserStoreExtension userStore = new UserStoreExtension();
+    public static final UserStoreExtension userStore = new UserStoreExtension();
 
     @RegisterExtension
     protected static final ClientStoreExtension clientStore = new ClientStoreExtension();
