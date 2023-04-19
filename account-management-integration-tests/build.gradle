@@ -22,7 +22,7 @@ dependencies {
     testImplementation project(":shared"), noXray
     testImplementation project(":account-management-api"), noXray
     testImplementation project(":shared-test"), noXray
-
+    testImplementation("au.com.dius.pact.provider:junit5:4.1.7")
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
 }
