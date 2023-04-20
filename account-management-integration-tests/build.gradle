@@ -30,8 +30,11 @@ dependencies {
 test {
     useJUnitPlatform()
     filter {
-        includeTestsMatching "*"
+        includeTestsMatching "PactIntegrationTest"
     }
+    systemProperty 'pact.provider.version', "testVersion"
+    systemProperty 'pact.provider.tag', "testBranch"
+    systemProperty 'pact.verifier.publishResults', 'true'
     environment "AUDIT_SIGNING_KEY_ALIAS", "alias/local-audit-payload-signing-key-alias"
     environment "AWS_ACCESS_KEY_ID", "mock-access-key"
     environment "AWS_REGION", "eu-west-2"
@@ -45,6 +48,7 @@ test {
     environment "SQS_ENDPOINT", "http://localhost:45678"
     environment "TRACING_ENABLED", "false"
     environment "INTERNAl_SECTOR_URI", "https://test.account.gov.uk"
+    environment "pact.verifier.publishResults", "true"
 
     testLogging {
         showStandardStreams = false

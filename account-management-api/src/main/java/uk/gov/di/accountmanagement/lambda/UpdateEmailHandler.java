@@ -111,6 +111,7 @@ public class UpdateEmailHandler
                             updateInfoRequest.getOtp(),
                             NotificationType.VERIFY_EMAIL);
             if (!isValidOtpCode) {
+                System.out.println("missing valid otp code");
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1020);
             }
             Optional<ErrorResponse> emailValidationErrors =

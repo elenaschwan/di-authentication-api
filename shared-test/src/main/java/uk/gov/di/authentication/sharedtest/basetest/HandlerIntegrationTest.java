@@ -139,8 +139,7 @@ public abstract class HandlerIntegrationTest<Q, S> {
     protected static final RedisExtension redis =
             new RedisExtension(SerializationService.getInstance(), TEST_CONFIGURATION_SERVICE);
 
-    @RegisterExtension
-    public static final UserStoreExtension userStore = new UserStoreExtension();
+    @RegisterExtension public static final UserStoreExtension userStore = new UserStoreExtension();
 
     @RegisterExtension
     protected static final ClientStoreExtension clientStore = new ClientStoreExtension();

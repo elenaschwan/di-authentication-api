@@ -106,10 +106,13 @@ public class UpdatePasswordHandler
                 matchSupportedLanguage(
                         getUserLanguageFromRequestHeaders(
                                 input.getHeaders(), configurationService));
+        System.out.println("returned from validation of header");
         context.getClientContext();
+        LOG.info("got context");
         try {
             UpdatePasswordRequest updatePasswordRequest =
                     objectMapper.readValue(input.getBody(), UpdatePasswordRequest.class);
+            LOG.info("update password request formed " + updatePasswordRequest.getNewPassword());
 
             Optional<ErrorResponse> passwordValidationError =
                     passwordValidator.validate(updatePasswordRequest.getNewPassword());
@@ -118,6 +121,7 @@ public class UpdatePasswordHandler
                 LOG.info("Error message: {}", passwordValidationError.get().getMessage());
                 return generateApiGatewayProxyErrorResponse(400, passwordValidationError.get());
             }
+            LOG.info("trying to get user profile " + updatePasswordRequest.getEmail());
             var userProfile =
                     dynamoService
                             .getUserProfileByEmailMaybe(updatePasswordRequest.getEmail())
@@ -125,14 +129,15 @@ public class UpdatePasswordHandler
                                     () ->
                                             new UserNotFoundException(
                                                     "User not found with given email"));
-
             Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
+            LOG.info("Got authorizer params");
 
             if (PrincipalValidationHelper.principleIsInvalid(
                     userProfile,
                     configurationService.getInternalSectorUri(),
                     dynamoService,
                     authorizerParams)) {
+                LOG.info("Invalid Principal in request");
                 throw new InvalidPrincipalException("Invalid Principal in request");
             }
 
@@ -140,6 +145,8 @@ public class UpdatePasswordHandler
                     dynamoService
                             .getUserCredentialsFromEmail(updatePasswordRequest.getEmail())
                             .getPassword();
+
+            LOG.info("current password: " + currentPassword);
 
             if (isNewPasswordSameAsCurrentPassword(
                     currentPassword, updatePasswordRequest.getNewPassword())) {
@@ -182,6 +189,7 @@ public class UpdatePasswordHandler
         } catch (UserNotFoundException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
         } catch (JsonException | IllegalArgumentException e) {
+            System.out.println("error here");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
     }
