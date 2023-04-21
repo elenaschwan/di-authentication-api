@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.http.HttpRequest;
 
@@ -35,6 +36,9 @@ import static uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTes
 public class PactIntegrationTest extends HandlerIntegrationTest {
 
     private static final String TEST_EMAIL = "testEmail@mail.com";
+
+    private static final String CURRENT_PASSWORD = "password-1";
+
     private static final Subject SUBJECT = new Subject();
     private static final int PORT = 5050;
 
@@ -51,16 +55,21 @@ public class PactIntegrationTest extends HandlerIntegrationTest {
         context.setTarget(new HttpTestTarget("localhost", PORT));
     }
 
-    @State("API server is healthy and valid new password is entered") // with existing user
+    @State("API server is healthy") // with existing user
     void setHealthyServer() {
 
     }
+
+//    @State("API server is not healthy") // with existing user
+//    void setNotHealthyServer() {
+//        // how can we achieve this?
+//    }
 
 
     @TestTemplate
     @ExtendWith(PactVerificationInvocationContextProvider.class)
     void testMethod(PactVerificationContext context, HttpRequest request) {
-        String publicSubjectID = userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
+        String publicSubjectID = userStore.signUp(TEST_EMAIL, CURRENT_PASSWORD, SUBJECT);
         System.out.println(publicSubjectID);
         request.addHeader("publicSubjectID", publicSubjectID);
         context.verifyInteraction();

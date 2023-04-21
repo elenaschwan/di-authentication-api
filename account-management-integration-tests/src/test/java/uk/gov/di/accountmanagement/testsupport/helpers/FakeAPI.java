@@ -38,54 +38,24 @@ class WrapperHandler implements HttpHandler {
     public void handle(HttpExchange exchange) throws IOException {
 
         try {
-            System.out.println("request method:" + exchange.getRequestMethod());
-            String requestBody =
-                    IOUtils.toString(exchange.getRequestBody(), StandardCharsets.UTF_8);
-            System.out.println("BODY FROM ORIGINAL REQUEST");
-            System.out.println(requestBody);
-
-            Headers requestHeaders = exchange.getRequestHeaders();
-            System.out.println(requestHeaders.containsKey("publicSubjectID"));
-
-            String requestId = UUID.randomUUID().toString();
-
-            APIGatewayProxyRequestEvent apiGatewayProxyRequestEvent =
-                    new APIGatewayProxyRequestEvent()
-                            .withBody(requestBody)
-                            .withHeaders(getHeaderMap(requestHeaders))
-                            .withHttpMethod(exchange.getRequestMethod())
-                            .withRequestContext(
-                                    new APIGatewayProxyRequestEvent.ProxyRequestContext()
-                                            .withRequestId(requestId));
-
-            apiGatewayProxyRequestEvent
-                    .getRequestContext()
-                    .setAuthorizer(Map.of("principalId", requestHeaders.get("publicSubjectID").get(0)));
-
-            System.out.println("BODY FROM AG FORMED REQUEST");
-            System.out.println(apiGatewayProxyRequestEvent.getBody());
-
+            APIGatewayProxyRequestEvent request = translateRequest(exchange);
             System.out.println("ATTEMPTING TO SET UP EMAIL-HANDLER");
-            RequestHandler emailHandler = this.handler;
 
             Context context = mock(Context.class);
 
             System.out.println("ATTEMPTING TO SEND EVENT TO HANDLER");
-            APIGatewayProxyResponseEvent response = (APIGatewayProxyResponseEvent) emailHandler.handleRequest(apiGatewayProxyRequestEvent, context);
+            APIGatewayProxyResponseEvent response = this.handler.handleRequest(request, context);
 
             System.out.println("RESPONSE FROM HANDLER");
-            System.out.println(response.toString());
-            // need to translate response back to something that can be transmitted.
-            System.out.println(response.toString().length());
-            exchange.sendResponseHeaders(response.getStatusCode(), response.toString().length());
-            OutputStream os = exchange.getResponseBody();
-            os.write(response.toString().getBytes());
-            os.flush();
-            os.close();
+            System.out.println(response);
+
+            translateResponse(response, exchange);
+
 
         } catch (Exception e) {
             System.out.println("error was caught");
             System.out.println(e.getMessage());
+            e.printStackTrace();
             String err = "some error happened";
             exchange.sendResponseHeaders(500, err.length());
             OutputStream os = exchange.getResponseBody();
@@ -99,5 +69,63 @@ class WrapperHandler implements HttpHandler {
         Map<String, String> tempMap = new HashMap<>();
         h.keySet().forEach(key -> tempMap.put(key, String.join(", ", h.get(key))));
         return tempMap;
+    }
+
+    private APIGatewayProxyRequestEvent translateRequest(HttpExchange request) throws IOException {
+
+        String requestBody = IOUtils.toString(request.getRequestBody(), StandardCharsets.UTF_8);
+        System.out.println("BODY FROM ORIGINAL REQUEST");
+        System.out.println(requestBody);
+
+        Headers requestHeaders = request.getRequestHeaders();
+
+        String requestId = UUID.randomUUID().toString();
+
+        APIGatewayProxyRequestEvent apiGatewayProxyRequestEvent =
+                new APIGatewayProxyRequestEvent()
+                        .withBody(requestBody)
+                        .withHeaders(getHeaderMap(requestHeaders))
+                        .withHttpMethod(request.getRequestMethod())
+                        .withRequestContext(
+                                new APIGatewayProxyRequestEvent.ProxyRequestContext()
+                                        .withRequestId(requestId));
+
+        apiGatewayProxyRequestEvent
+                .getRequestContext()
+                .setAuthorizer(Map.of("principalId", requestHeaders.get("publicSubjectID").get(0)));
+
+        System.out.println("BODY FROM AG FORMED REQUEST");
+        System.out.println(apiGatewayProxyRequestEvent.getBody());
+
+        return apiGatewayProxyRequestEvent;
+    }
+
+    private void translateResponse(APIGatewayProxyResponseEvent response, HttpExchange exchange) throws IOException{
+        Integer statusCode = response.getStatusCode();
+        Map<String, String> apiResponseHeaders = response.getHeaders();
+        apiResponseHeaders.put("Content-Type", "application/json");
+        Headers serverResponseHeaders = exchange.getResponseHeaders();
+        apiResponseHeaders.forEach(serverResponseHeaders::set);
+
+        if (response.getBody().isEmpty()) {
+            System.out.printf("empty body");
+            exchange.sendResponseHeaders(statusCode, 0);
+            OutputStream os = exchange.getResponseBody();
+            //os.write(response.toString().getBytes());
+            os.flush();
+            os.close();
+        }
+        else {
+            System.out.printf("getting response body");
+            String body = response.getBody();
+            exchange.sendResponseHeaders(statusCode, body.length());
+            OutputStream os = exchange.getResponseBody();
+            os.write(body.getBytes());
+            os.flush();
+            os.close();
+        }
+
+
+
     }
 }
