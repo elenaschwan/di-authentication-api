@@ -45,6 +45,16 @@ def getGitBranch = { ->
     return stdout.toString().trim()
 }
 
+//CanIDeployCheck {
+//    def stdout = new ByteArrayOutputStream()
+//    exec {
+//        commandLine 'pact-broker', 'can-i-deploy','--pacticipant' , '\"Account Management API\"', '--version', '\"$(git rev-parse --short HEAD)-1\"' , '--broker-base-url=http://localhost:8080', '--broker-username', 'test', '--broker-password', 'test'
+//        standardOutput = stdout
+//    }
+//    return stdout.toString().trim()
+//
+//}
+
 test {
     useJUnitPlatform()
     filter {

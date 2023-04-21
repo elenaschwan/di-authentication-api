@@ -1,38 +1,38 @@
 package uk.gov.di.accountmanagement.testsupport.helpers;
 
 import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
-import org.apache.commons.io.IOUtils;
-import uk.gov.di.accountmanagement.lambda.UpdatePasswordHandler;
 
+import org.apache.commons.io.IOUtils;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 import static org.mockito.Mockito.mock;
-import static uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest.TXMA_ENABLED_CONFIGURATION_SERVICE;
 
 public class FakeAPI {
 
-    public static void startServer() throws IOException {
+    public static void startServer(ArrayList<Injector> endpointList) throws IOException {
         HttpServer server = HttpServer.create(new InetSocketAddress(5050), 0);
-        server.createContext("/update-password", new WrapperHandler());
+        endpointList.forEach((item) -> server.createContext(item.getEndpoint(), new WrapperHandler(item.getHandler())));
         server.setExecutor(null); // creates a default executor
         server.start();
     }
 }
 
 class WrapperHandler implements HttpHandler {
+    private final RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> handler;
+    public WrapperHandler(RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent>  h){
+        this.handler = h;
+    }
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
@@ -66,14 +66,12 @@ class WrapperHandler implements HttpHandler {
             System.out.println(apiGatewayProxyRequestEvent.getBody());
 
             System.out.println("ATTEMPTING TO SET UP EMAIL-HANDLER");
-            UpdatePasswordHandler emailHandler =
-                    new UpdatePasswordHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+            RequestHandler emailHandler = this.handler;
 
             Context context = mock(Context.class);
 
             System.out.println("ATTEMPTING TO SEND EVENT TO HANDLER");
-            APIGatewayProxyResponseEvent response =
-                    emailHandler.handleRequest(apiGatewayProxyRequestEvent, context);
+            APIGatewayProxyResponseEvent response = (APIGatewayProxyResponseEvent) emailHandler.handleRequest(apiGatewayProxyRequestEvent, context);
 
             System.out.println("RESPONSE FROM HANDLER");
             System.out.println(response.toString());

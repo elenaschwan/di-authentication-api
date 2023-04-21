@@ -12,10 +12,16 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.api.extension.ExtendWith;
+import uk.gov.di.accountmanagement.lambda.UpdatePasswordHandler;
 import uk.gov.di.accountmanagement.testsupport.helpers.FakeAPI;
+import uk.gov.di.accountmanagement.testsupport.helpers.Injector;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import org.apache.http.HttpRequest;
 
 import static uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest.userStore;
@@ -34,7 +40,10 @@ public class PactIntegrationTest extends HandlerIntegrationTest {
 
     @BeforeAll
     static void startServer() throws IOException {
-        FakeAPI.startServer();
+        Injector passwordChangeInjector = new Injector(new UpdatePasswordHandler(TXMA_ENABLED_CONFIGURATION_SERVICE), "/update-password");
+        Injector emailChangeInjector = new Injector(new UpdatePasswordHandler(TXMA_ENABLED_CONFIGURATION_SERVICE), "/update-email");
+        Injector phoneNumberChangeInjector = new Injector(new UpdatePasswordHandler(TXMA_ENABLED_CONFIGURATION_SERVICE), "/update-phone-number");
+        FakeAPI.startServer(new ArrayList<>(Arrays.asList(passwordChangeInjector, emailChangeInjector, phoneNumberChangeInjector)));
     }
 
     @BeforeEach
