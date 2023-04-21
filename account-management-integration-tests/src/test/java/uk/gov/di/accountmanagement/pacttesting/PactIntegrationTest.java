@@ -1,4 +1,4 @@
-package uk.gov.di.accountmanagement.api;
+package uk.gov.di.accountmanagement.pacttesting;
 
 import au.com.dius.pact.provider.junit5.HttpTestTarget;
 import au.com.dius.pact.provider.junit5.PactVerificationContext;
@@ -16,6 +16,7 @@ import uk.gov.di.accountmanagement.testsupport.helpers.FakeAPI;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
 
 import java.io.IOException;
+import org.apache.http.HttpRequest;
 
 import static uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest.userStore;
 
@@ -33,9 +34,7 @@ public class PactIntegrationTest extends HandlerIntegrationTest {
 
     @BeforeAll
     static void startServer() throws IOException {
-        String publicSubjectID = userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
-        System.out.println(publicSubjectID);
-        FakeAPI.startServer(publicSubjectID);
+        FakeAPI.startServer();
     }
 
     @BeforeEach
@@ -44,17 +43,17 @@ public class PactIntegrationTest extends HandlerIntegrationTest {
     }
 
     @State("API server is healthy and valid new password is entered") // with existing user
-    void setHealthyServer() {}
+    void setHealthyServer() {
 
-    @State("API server is healthy, email already assigned to another user")
-    void setHealthyServerAndEmailAlreadyInUse() {}
+    }
 
-    @State("API server is not healthy")
-    void setBrokenApi() {}
 
     @TestTemplate
     @ExtendWith(PactVerificationInvocationContextProvider.class)
-    void testMethod(PactVerificationContext context) {
+    void testMethod(PactVerificationContext context, HttpRequest request) {
+        String publicSubjectID = userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
+        System.out.println(publicSubjectID);
+        request.addHeader("publicSubjectID", publicSubjectID);
         context.verifyInteraction();
     }
 }

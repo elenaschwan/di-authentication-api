@@ -27,13 +27,31 @@ dependencies {
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
 }
 
+def getGitHash = { ->
+    def stdout = new ByteArrayOutputStream()
+    exec {
+        commandLine 'git', 'rev-parse', '--short', 'HEAD'
+        standardOutput = stdout
+    }
+    return stdout.toString().trim()
+}
+
+def getGitBranch = { ->
+    def stdout = new ByteArrayOutputStream()
+    exec {
+        commandLine 'git', 'rev-parse', '--abbrev-ref', 'HEAD'
+        standardOutput = stdout
+    }
+    return stdout.toString().trim()
+}
+
 test {
     useJUnitPlatform()
     filter {
         includeTestsMatching "PactIntegrationTest"
     }
-    systemProperty 'pact.provider.version', "testVersion"
-    systemProperty 'pact.provider.tag', "testBranch"
+    systemProperty 'pact.provider.version', getGitHash()
+    systemProperty 'pact.provider.tag', getGitBranch()
     systemProperty 'pact.verifier.publishResults', 'true'
     environment "AUDIT_SIGNING_KEY_ALIAS", "alias/local-audit-payload-signing-key-alias"
     environment "AWS_ACCESS_KEY_ID", "mock-access-key"
