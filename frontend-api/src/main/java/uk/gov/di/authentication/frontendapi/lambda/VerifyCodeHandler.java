@@ -9,15 +9,14 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
 import uk.gov.di.authentication.frontendapi.services.DynamoAccountRecoveryBlockService;
-import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
+import uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
-import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -26,19 +25,24 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.shared.validation.MfaCodeValidatorFactory;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import static java.util.Map.entry;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_VERIFIED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.INVALID_CODE_SENT;
 import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
-import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
-import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.TestClientHelper.isTestClientWithAllowedEmail;
@@ -54,6 +58,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final DynamoAccountRecoveryBlockService accountRecoveryBlockService;
+    private final MfaCodeValidatorFactory mfaCodeValidatorFactory;
 
     protected VerifyCodeHandler(
             ConfigurationService configurationService,
@@ -64,7 +69,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             CodeStorageService codeStorageService,
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
-            DynamoAccountRecoveryBlockService accountRecoveryBlockService) {
+            DynamoAccountRecoveryBlockService accountRecoveryBlockService,
+            MfaCodeValidatorFactory mfaCodeValidatorFactory) {
         super(
                 VerifyCodeRequest.class,
                 configurationService,
@@ -76,6 +82,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.accountRecoveryBlockService = accountRecoveryBlockService;
+        this.mfaCodeValidatorFactory = mfaCodeValidatorFactory;
     }
 
     public VerifyCodeHandler() {
@@ -89,6 +96,11 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.accountRecoveryBlockService =
                 new DynamoAccountRecoveryBlockService(configurationService);
+        this.mfaCodeValidatorFactory =
+                new MfaCodeValidatorFactory(
+                        configurationService,
+                        codeStorageService,
+                        new DynamoService(configurationService));
     }
 
     @Override
@@ -105,104 +117,125 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
             var session = userContext.getSession();
 
-            if (isCodeBlockedForSession(session)) {
-                ErrorResponse errorResponse = blockedCodeBehaviour(codeRequest);
-                return generateApiGatewayProxyErrorResponse(400, errorResponse);
+            NotificationType notificationType = codeRequest.getNotificationType();
+            MFAMethodType mfaMethodType =
+                    getMfaMethodTypeFromNotificationType(notificationType).orElse(null);
+
+            if (Objects.isNull(mfaMethodType)) {
+                LOG.info("No MFAMethodType for NotificationType: {}", notificationType);
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1002);
             }
 
-            var isTestClient = isTestClientWithAllowedEmail(userContext, configurationService);
-            var code =
-                    isTestClient
-                            ? getOtpCodeForTestClient(codeRequest.getNotificationType())
-                            : codeStorageService.getOtpCode(
-                                    session.getEmailAddress(), codeRequest.getNotificationType());
+            boolean isRegistration = isNotificationTypePartOfARegistrationJourney(notificationType);
 
-            var errorResponse =
-                    ValidationHelper.validateVerificationCode(
-                            codeRequest.getNotificationType(),
-                            code,
-                            codeRequest.getCode(),
-                            codeStorageService,
-                            session.getEmailAddress(),
-                            configurationService.getCodeMaxRetries());
+            boolean isTestClient = isTestClientWithAllowedEmail(userContext, configurationService);
+            var mfaCodeValidator =
+                    mfaCodeValidatorFactory
+                            .getMfaCodeValidator(
+                                    mfaMethodType, isRegistration, isTestClient, userContext)
+                            .orElse(null);
 
-            if (errorResponse.stream().anyMatch(ErrorResponse.ERROR_1002::equals)) {
-                return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
+            if (Objects.isNull(mfaCodeValidator)) {
+                LOG.info("No MFA code validator found for this MFA method type");
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1002);
             }
 
+            LOG.info(codeRequest.getCode());
+
+            var errorResponse = mfaCodeValidator.validateCode(codeRequest.getCode());
+
+            processCodeSession(
+                    errorResponse, session, notificationType, mfaMethodType, input, userContext);
             sessionService.save(session);
 
-            if (errorResponse.isPresent()) {
-                processBlockedCodeSession(
-                        errorResponse.get(),
-                        session,
-                        codeRequest.getNotificationType(),
-                        input,
-                        userContext);
-                return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
-            }
-            processSuccessfulCodeRequest(
-                    session, codeRequest.getNotificationType(), input, userContext);
+            return errorResponse
+                    .map(response -> generateApiGatewayProxyErrorResponse(400, response))
+                    .orElseGet(
+                            () -> {
+                                LOG.info(
+                                        "Code has been successfully verified for notification type: {}",
+                                        notificationType);
 
-            return generateEmptySuccessApiGatewayResponse();
+                                return ApiGatewayResponseHelper
+                                        .generateEmptySuccessApiGatewayResponse();
+                            });
         } catch (ClientNotFoundException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
     }
 
-    private ErrorResponse blockedCodeBehaviour(VerifyCodeRequest codeRequest) {
-        return Map.ofEntries(
-                        entry(VERIFY_EMAIL, ErrorResponse.ERROR_1033),
-                        entry(MFA_SMS, ErrorResponse.ERROR_1027))
-                .get(codeRequest.getNotificationType());
+    private Optional<MFAMethodType> getMfaMethodTypeFromNotificationType(
+            NotificationType notificationType) {
+        switch (notificationType) {
+            case VERIFY_EMAIL:
+            case RESET_PASSWORD_WITH_CODE:
+                return Optional.of(MFAMethodType.EMAIL);
+            case MFA_SMS:
+                return Optional.of(MFAMethodType.SMS);
+            default:
+                return Optional.empty();
+        }
     }
 
-    private boolean isCodeBlockedForSession(Session session) {
-        return codeStorageService.isBlockedForEmail(
-                session.getEmailAddress(), CODE_BLOCKED_KEY_PREFIX);
+    private FrontendAuditableEvent errorResponseAsFrontendAuditableEvent(
+            ErrorResponse errorResponse) {
+
+        Map<ErrorResponse, FrontendAuditableEvent> map =
+                Map.ofEntries(
+                        entry(ErrorResponse.ERROR_1021, INVALID_CODE_SENT),
+                        entry(ErrorResponse.ERROR_1033, CODE_MAX_RETRIES_REACHED),
+                        entry(ErrorResponse.ERROR_1036, INVALID_CODE_SENT),
+                        entry(ErrorResponse.ERROR_1039, CODE_MAX_RETRIES_REACHED));
+
+        if (map.containsKey(errorResponse)) {
+            return map.get(errorResponse);
+        }
+
+        return INVALID_CODE_SENT;
     }
 
-    private void blockCodeForSession(Session session) {
-        codeStorageService.saveBlockedForEmail(
-                session.getEmailAddress(),
-                CODE_BLOCKED_KEY_PREFIX,
-                configurationService.getBlockedEmailDuration());
-        LOG.info("Email is blocked");
+    private boolean isNotificationTypePartOfARegistrationJourney(
+            NotificationType notificationType) {
+        if (notificationType == NotificationType.VERIFY_EMAIL) {
+            return true;
+        }
+        return false;
     }
 
-    private void resetIncorrectMfaCodeAttemptsCount(Session session) {
-        codeStorageService.deleteIncorrectMfaCodeAttemptsCount(session.getEmailAddress());
-        LOG.info("IncorrectMfaCodeAttemptsCount reset");
-    }
-
-    private void processSuccessfulCodeRequest(
+    private void processCodeSession(
+            Optional<ErrorResponse> errorResponse,
             Session session,
             NotificationType notificationType,
+            MFAMethodType mfaMethodType,
             APIGatewayProxyRequestEvent input,
             UserContext userContext) {
-        var metadataPairs =
-                new AuditService.MetadataPair[] {
-                    pair("notification-type", notificationType.name())
-                };
-        var clientSession = userContext.getClientSession();
+        String emailAddress = session.getEmailAddress();
         var clientId = userContext.getClient().get().getClientID();
+        var clientSession = userContext.getClientSession();
         var levelOfConfidence =
                 clientSession.getEffectiveVectorOfTrust().containsLevelOfConfidence()
                         ? clientSession.getEffectiveVectorOfTrust().getLevelOfConfidence()
                         : NONE;
 
-        if (notificationType.equals(MFA_SMS)) {
+        var auditableEvent =
+                errorResponse
+                        .map(this::errorResponseAsFrontendAuditableEvent)
+                        .orElse(CODE_VERIFIED);
+
+        List<AuditService.MetadataPair> metadataPairs = new ArrayList<>();
+        metadataPairs.add(pair("notification-type", notificationType.name()));
+
+        if (errorResponse.isEmpty() && notificationType.equals(MFA_SMS)) {
             LOG.info(
                     "MFA code has been successfully verified for MFA type: {}. RegistrationJourney: {}",
                     MFAMethodType.SMS.getValue(),
                     false);
             sessionService.save(session.setVerifiedMfaMethodType(MFAMethodType.SMS));
-            metadataPairs =
-                    new AuditService.MetadataPair[] {
-                        pair("notification-type", notificationType.name()),
-                        pair("mfa-type", MFAMethodType.SMS.getValue())
-                    };
-            accountRecoveryBlockService.deleteBlockIfPresent(session.getEmailAddress());
+
+            metadataPairs.add(pair("mfa-type", mfaMethodType.getValue()));
+
+            accountRecoveryBlockService.deleteBlockIfPresent(emailAddress);
+
             cloudwatchMetricsService.incrementAuthenticationSuccess(
                     session.isNewAccount(),
                     clientId,
@@ -211,51 +244,23 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     clientService.isTestJourney(clientId, session.getEmailAddress()),
                     true);
         }
-        codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
-        auditService.submitAuditEvent(
-                FrontendAuditableEvent.CODE_VERIFIED,
-                userContext.getClientSessionId(),
-                session.getSessionId(),
-                userContext
-                        .getClient()
-                        .map(ClientRegistry::getClientID)
-                        .orElse(AuditService.UNKNOWN),
-                session.getInternalCommonSubjectIdentifier(),
-                session.getEmailAddress(),
-                IpAddressHelper.extractIpAddress(input),
-                AuditService.UNKNOWN,
-                extractPersistentIdFromHeaders(input.getHeaders()),
-                metadataPairs);
-    }
 
-    private void processBlockedCodeSession(
-            ErrorResponse errorResponse,
-            Session session,
-            NotificationType notificationType,
-            APIGatewayProxyRequestEvent input,
-            UserContext userContext) {
-        var metadataPairs =
-                new AuditService.MetadataPair[] {
-                    pair("notification-type", notificationType.name())
-                };
-        if (notificationType.equals(MFA_SMS)) {
-            metadataPairs =
-                    new AuditService.MetadataPair[] {
-                        pair("notification-type", notificationType.name()),
-                        pair("mfa-type", MFAMethodType.SMS.getValue())
-                    };
+        codeStorageService.deleteOtpCode(emailAddress, notificationType);
+
+        if (errorResponse
+                .map(
+                        t ->
+                                List.of(
+                                                ErrorResponse.ERROR_1027,
+                                                ErrorResponse.ERROR_1034,
+                                                ErrorResponse.ERROR_1033,
+                                                ErrorResponse.ERROR_1039)
+                                        .contains(t))
+                .orElse(false)) {
+            blockCodeForEmailAndMfaTypeAndResetCountIfBlockDoesNotExist(
+                    emailAddress, mfaMethodType);
         }
-        AuditableEvent auditableEvent;
-        if (List.of(ErrorResponse.ERROR_1027, ErrorResponse.ERROR_1033).contains(errorResponse)) {
-            if (!notificationType.equals(VERIFY_EMAIL)
-                    && !errorResponse.equals(ErrorResponse.ERROR_1033)) {
-                blockCodeForSession(session);
-            }
-            resetIncorrectMfaCodeAttemptsCount(session);
-            auditableEvent = FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
-        } else {
-            auditableEvent = FrontendAuditableEvent.INVALID_CODE_SENT;
-        }
+
         auditService.submitAuditEvent(
                 auditableEvent,
                 userContext.getClientSessionId(),
@@ -269,21 +274,21 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 IpAddressHelper.extractIpAddress(input),
                 AuditService.UNKNOWN,
                 extractPersistentIdFromHeaders(input.getHeaders()),
-                metadataPairs);
+                metadataPairs.toArray(new AuditService.MetadataPair[metadataPairs.size()]));
     }
 
-    private Optional<String> getOtpCodeForTestClient(NotificationType notificationType) {
-        LOG.info("Using TestClient with NotificationType {}", notificationType);
-        switch (notificationType) {
-            case VERIFY_EMAIL:
-            case RESET_PASSWORD_WITH_CODE:
-                return configurationService.getTestClientVerifyEmailOTP();
-            case MFA_SMS:
-                return configurationService.getTestClientVerifyPhoneNumberOTP();
-            default:
-                LOG.error(
-                        "Invalid NotificationType: {} configured for TestClient", notificationType);
-                throw new RuntimeException("Invalid NotificationType for use with TestClient");
+    private void blockCodeForEmailAndMfaTypeAndResetCountIfBlockDoesNotExist(
+            String emailAddress, MFAMethodType mfaMethodType) {
+
+        if (codeStorageService.isBlockedForEmail(emailAddress, CODE_BLOCKED_KEY_PREFIX)) {
+            return;
         }
+
+        codeStorageService.saveBlockedForEmail(
+                emailAddress,
+                CODE_BLOCKED_KEY_PREFIX + mfaMethodType.getValue(),
+                configurationService.getBlockedEmailDuration());
+
+        codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress, mfaMethodType);
     }
 }

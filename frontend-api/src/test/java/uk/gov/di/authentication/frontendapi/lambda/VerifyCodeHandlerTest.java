@@ -37,6 +37,9 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.validation.EmailCodeValidator;
+import uk.gov.di.authentication.shared.validation.MfaCodeValidatorFactory;
+import uk.gov.di.authentication.shared.validation.PhoneNumberCodeValidator;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
@@ -49,6 +52,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -104,7 +109,10 @@ class VerifyCodeHandlerTest {
             mock(CloudwatchMetricsService.class);
     private final DynamoAccountRecoveryBlockService accountRecoveryBlockService =
             mock(DynamoAccountRecoveryBlockService.class);
-
+    private final MfaCodeValidatorFactory mfaCodeValidatorFactory =
+            mock(MfaCodeValidatorFactory.class);
+    private final EmailCodeValidator emailCodeValidator = mock(EmailCodeValidator.class);
+    private final PhoneNumberCodeValidator phoneCodeValidator = mock(PhoneNumberCodeValidator.class);
     private final ClientRegistry clientRegistry =
             new ClientRegistry()
                     .withTestClient(false)
@@ -151,7 +159,8 @@ class VerifyCodeHandlerTest {
                         codeStorageService,
                         auditService,
                         cloudwatchMetricsService,
-                        accountRecoveryBlockService);
+                        accountRecoveryBlockService,
+                        mfaCodeValidatorFactory);
 
         when(authenticationService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
@@ -168,6 +177,7 @@ class VerifyCodeHandlerTest {
 
     @Test
     void shouldReturn204ForValidVerifyEmailRequest() {
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), anyBoolean(), any())).thenReturn(Optional.ofNullable(emailCodeValidator));
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
                 .thenReturn(Optional.of(CODE));
@@ -193,6 +203,7 @@ class VerifyCodeHandlerTest {
 
     @Test
     void shouldReturnEmailCodeNotValidStateIfRequestCodeDoesNotMatchStoredCode() {
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), anyBoolean(), any())).thenReturn(Optional.ofNullable(emailCodeValidator));
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
                 .thenReturn(Optional.of(CODE));

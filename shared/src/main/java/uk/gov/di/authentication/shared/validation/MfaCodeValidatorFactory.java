@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.shared.validation;
 
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -10,7 +11,7 @@ import java.util.Optional;
 
 public class MfaCodeValidatorFactory {
 
-    private final ConfigurationService configurationService;
+    protected final ConfigurationService configurationService;
     private final CodeStorageService codeStorageService;
     private final AuthenticationService authenticationService;
 
@@ -24,7 +25,10 @@ public class MfaCodeValidatorFactory {
     }
 
     public Optional<MfaCodeValidator> getMfaCodeValidator(
-            MFAMethodType mfaMethodType, boolean isRegistration, UserContext userContext) {
+            MFAMethodType mfaMethodType,
+            boolean isRegistration,
+            boolean isTestClient,
+            UserContext userContext) {
 
         switch (mfaMethodType) {
             case AUTH_APP:
@@ -45,7 +49,16 @@ public class MfaCodeValidatorFactory {
                                 codeStorageService,
                                 userContext,
                                 configurationService,
-                                isRegistration));
+                                isRegistration,
+                                isTestClient));
+            case EMAIL:
+                return Optional.of(
+                        new EmailCodeValidator(
+                                userContext.getSession().getEmailAddress(),
+                                codeStorageService,
+                                configurationService,
+                                NotificationType.VERIFY_EMAIL,
+                                isTestClient));
             default:
                 return Optional.empty();
         }

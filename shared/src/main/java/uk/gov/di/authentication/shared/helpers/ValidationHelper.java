@@ -6,8 +6,6 @@ import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.NotificationType;
-import uk.gov.di.authentication.shared.services.CodeStorageService;
 
 import java.util.List;
 import java.util.Objects;
@@ -159,52 +157,53 @@ public class ValidationHelper {
         return Optional.empty();
     }
 
-    public static Optional<ErrorResponse> validateVerificationCode(
-            NotificationType type,
-            Optional<String> code,
-            String input,
-            CodeStorageService codeStorageService,
-            String emailAddress,
-            int maxRetries) {
-
-        if (code.filter(input::equals).isPresent()) {
-            codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress);
-
-            switch (type) {
-                case MFA_SMS:
-                case VERIFY_EMAIL:
-                case VERIFY_PHONE_NUMBER:
-                case RESET_PASSWORD_WITH_CODE:
-                    return Optional.empty();
-            }
-            return Optional.of(ErrorResponse.ERROR_1002);
-        }
-
-        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(emailAddress);
-
-        if (codeStorageService.getIncorrectMfaCodeAttemptsCount(emailAddress) > maxRetries) {
-            switch (type) {
-                case MFA_SMS:
-                    return Optional.of(ErrorResponse.ERROR_1027);
-                case VERIFY_EMAIL:
-                    return Optional.of(ErrorResponse.ERROR_1033);
-                case VERIFY_PHONE_NUMBER:
-                    return Optional.of(ErrorResponse.ERROR_1034);
-                case RESET_PASSWORD_WITH_CODE:
-                    return Optional.of(ErrorResponse.ERROR_1039);
-            }
-        }
-
-        switch (type) {
-            case MFA_SMS:
-                return Optional.of(ErrorResponse.ERROR_1035);
-            case VERIFY_EMAIL:
-                return Optional.of(ErrorResponse.ERROR_1036);
-            case VERIFY_PHONE_NUMBER:
-                return Optional.of(ErrorResponse.ERROR_1037);
-            case RESET_PASSWORD_WITH_CODE:
-                return Optional.of(ErrorResponse.ERROR_1021);
-        }
-        return Optional.of(ErrorResponse.ERROR_1002);
-    }
+    //    public static Optional<ErrorResponse> validateVerificationCode(
+    //            NotificationType type,
+    //            Optional<String> code,
+    //            String input,
+    //            CodeStorageService codeStorageService,
+    //            String emailAddress,
+    //            int maxRetries) {
+    //
+    //        //        if (code.filter(input::equals).isPresent()) {
+    //        //            codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress);
+    //        //
+    //        //            switch (type) {
+    //        //                case MFA_SMS:
+    //        //                case VERIFY_EMAIL:
+    //        //                case VERIFY_PHONE_NUMBER:
+    //        //                case RESET_PASSWORD_WITH_CODE:
+    //        //                    return Optional.empty();
+    //        //            }
+    //        //            return Optional.of(ErrorResponse.ERROR_1002);
+    //        //        }
+    //
+    //        //codeStorageService.increaseIncorrectMfaCodeAttemptsCount(emailAddress);
+    //
+    ////        if (codeStorageService.getIncorrectMfaCodeAttemptsCount(emailAddress) > maxRetries)
+    // {
+    ////            switch (type) {
+    ////                case MFA_SMS:
+    ////                    return Optional.of(ErrorResponse.ERROR_1027);
+    ////                    //                case VERIFY_EMAIL:
+    ////                    //                    return Optional.of(ErrorResponse.ERROR_1033);
+    ////                case VERIFY_PHONE_NUMBER:
+    ////                    return Optional.of(ErrorResponse.ERROR_1034);
+    //////                case RESET_PASSWORD_WITH_CODE:
+    //////                    return Optional.of(ErrorResponse.ERROR_1039);
+    ////            }
+    ////        }
+    //
+    ////        switch (type) {
+    ////            case MFA_SMS:
+    ////                return Optional.of(ErrorResponse.ERROR_1035);
+    //////            case VERIFY_EMAIL:
+    ////                //                return Optional.of(ErrorResponse.ERROR_1036);
+    ////            case VERIFY_PHONE_NUMBER:
+    ////                return Optional.of(ErrorResponse.ERROR_1037);
+    ////            case RESET_PASSWORD_WITH_CODE:
+    ////                return Optional.of(ErrorResponse.ERROR_1021);
+    ////        }
+    ////        return Optional.of(ErrorResponse.ERROR_1002);
+    //    }
 }

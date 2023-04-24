@@ -37,7 +37,7 @@ class MfaCodeValidatorFactoryTest {
         when(userContext.getSession()).thenReturn(session);
         var mfaCodeValidator =
                 mfaCodeValidatorFactory.getMfaCodeValidator(
-                        MFAMethodType.AUTH_APP, true, userContext);
+                        MFAMethodType.AUTH_APP, true, false, userContext);
 
         assertInstanceOf(AuthAppCodeValidator.class, mfaCodeValidator.get());
     }
@@ -47,7 +47,8 @@ class MfaCodeValidatorFactoryTest {
         when(session.getEmailAddress()).thenReturn("test@test.com");
         when(userContext.getSession()).thenReturn(session);
         var mfaCodeValidator =
-                mfaCodeValidatorFactory.getMfaCodeValidator(MFAMethodType.SMS, true, userContext);
+                mfaCodeValidatorFactory.getMfaCodeValidator(
+                        MFAMethodType.SMS, true, false, userContext);
 
         assertInstanceOf(PhoneNumberCodeValidator.class, mfaCodeValidator.get());
     }

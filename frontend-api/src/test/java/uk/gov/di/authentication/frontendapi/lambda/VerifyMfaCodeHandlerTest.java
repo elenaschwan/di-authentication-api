@@ -166,7 +166,7 @@ class VerifyMfaCodeHandlerTest {
     @MethodSource("credentialTrustLevels")
     void shouldReturn204WhenSuccessfulAuthCodeRegistrationRequest(
             CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), anyBoolean(), any()))
                 .thenReturn(Optional.of(authAppCodeValidator));
         when(authAppCodeValidator.validateCode(CODE)).thenReturn(Optional.empty());
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
@@ -208,7 +208,7 @@ class VerifyMfaCodeHandlerTest {
     @MethodSource("credentialTrustLevels")
     void shouldReturn204WhenSuccessfulPhoneCodeRegistrationRequest(
             CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), anyBoolean(), any()))
                 .thenReturn(Optional.of(phoneNumberCodeValidator));
         when(phoneNumberCodeValidator.validateCode(CODE)).thenReturn(Optional.empty());
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
@@ -247,7 +247,7 @@ class VerifyMfaCodeHandlerTest {
 
     @Test
     void shouldReturn204WhenSuccessfulAuthCodeLoginRequest() throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), anyBoolean(), any()))
                 .thenReturn(Optional.of(authAppCodeValidator));
         when(authAppCodeValidator.validateCode(CODE)).thenReturn(Optional.empty());
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
@@ -282,7 +282,7 @@ class VerifyMfaCodeHandlerTest {
 
     @Test
     void shouldReturn400IfMfaCodeValidatorCannotBeFound() throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), anyBoolean(), any()))
                 .thenReturn(Optional.empty());
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
                 .thenReturn(Optional.of(CODE));
@@ -307,7 +307,7 @@ class VerifyMfaCodeHandlerTest {
     @Test
     void shouldReturn400AndBlockCodeWhenUserEnteredInvalidAuthAppCodeTooManyTimes()
             throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), anyBoolean(), any()))
                 .thenReturn(Optional.of(authAppCodeValidator));
         when(authAppCodeValidator.validateCode(CODE))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1042));
@@ -343,7 +343,7 @@ class VerifyMfaCodeHandlerTest {
     @Test
     void shouldReturn400AndNotBlockCodeWhenUserEnteredInvalidAuthAppCodeAndBlockAlreadyExists()
             throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), anyBoolean(), any()))
                 .thenReturn(Optional.of(authAppCodeValidator));
         when(authAppCodeValidator.validateCode(CODE))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1042));
@@ -381,7 +381,7 @@ class VerifyMfaCodeHandlerTest {
     @MethodSource("registration")
     void shouldReturn400WhenUserEnteredInvalidAuthAppCode(boolean registration)
             throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), anyBoolean(), any()))
                 .thenReturn(Optional.of(authAppCodeValidator));
         when(authAppCodeValidator.validateCode(CODE))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1043));
@@ -417,7 +417,7 @@ class VerifyMfaCodeHandlerTest {
     void
             shouldReturn400AndBlockCodeWhenUserEnteredInvalidPhoneNumberCodeDuringRegistrationTooManyTimes()
                     throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), anyBoolean(), any()))
                 .thenReturn(Optional.of(phoneNumberCodeValidator));
         when(phoneNumberCodeValidator.validateCode(CODE))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1034));
@@ -452,7 +452,7 @@ class VerifyMfaCodeHandlerTest {
     void
             shouldReturn400AndNotBlockCodeWhenInvalidPhoneNumberCodeEnteredDuringRegistrationAndBlockAlreadyExists()
                     throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), anyBoolean(), any()))
                 .thenReturn(Optional.of(phoneNumberCodeValidator));
         when(phoneNumberCodeValidator.validateCode(CODE))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1034));
@@ -488,7 +488,7 @@ class VerifyMfaCodeHandlerTest {
     @Test
     void shouldReturn400WhenUserEnteredInvalidPhoneNumberCodeForRegistration()
             throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), anyBoolean(), any()))
                 .thenReturn(Optional.of(phoneNumberCodeValidator));
         when(phoneNumberCodeValidator.validateCode(CODE))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1037));
