@@ -39,7 +39,7 @@ class WrapperHandler implements HttpHandler {
 
         try {
             APIGatewayProxyRequestEvent request = translateRequest(exchange);
-            System.out.println("ATTEMPTING TO SET UP EMAIL-HANDLER");
+            System.out.println("ATTEMPTING TO SET UP HANDLER");
 
             Context context = mock(Context.class);
 
