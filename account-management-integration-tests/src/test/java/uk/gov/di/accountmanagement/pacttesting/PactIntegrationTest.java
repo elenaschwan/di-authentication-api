@@ -12,7 +12,9 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.api.extension.ExtendWith;
+import uk.gov.di.accountmanagement.lambda.UpdateEmailHandler;
 import uk.gov.di.accountmanagement.lambda.UpdatePasswordHandler;
+import uk.gov.di.accountmanagement.lambda.UpdatePhoneNumberHandler;
 import uk.gov.di.accountmanagement.testsupport.helpers.FakeAPI;
 import uk.gov.di.accountmanagement.testsupport.helpers.Injector;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
@@ -20,12 +22,8 @@ import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
 
 import org.apache.http.HttpRequest;
-
-import static uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest.userStore;
 
 @Provider("Account Management API")
 // @PactFolder("./pacts")
@@ -33,7 +31,7 @@ import static uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTes
         host = "localhost",
         port = "8080",
         authentication = @PactBrokerAuth(username = "test", password = "test"))
-public class PactIntegrationTest extends HandlerIntegrationTest {
+class PactIntegrationTest extends HandlerIntegrationTest {
 
     private static final String TEST_EMAIL = "testEmail@mail.com";
 
@@ -45,8 +43,8 @@ public class PactIntegrationTest extends HandlerIntegrationTest {
     @BeforeAll
     static void startServer() throws IOException {
         Injector passwordChangeInjector = new Injector(new UpdatePasswordHandler(TXMA_ENABLED_CONFIGURATION_SERVICE), "/update-password");
-        Injector emailChangeInjector = new Injector(new UpdatePasswordHandler(TXMA_ENABLED_CONFIGURATION_SERVICE), "/update-email");
-        Injector phoneNumberChangeInjector = new Injector(new UpdatePasswordHandler(TXMA_ENABLED_CONFIGURATION_SERVICE), "/update-phone-number");
+        Injector emailChangeInjector = new Injector(new UpdateEmailHandler(TXMA_ENABLED_CONFIGURATION_SERVICE), "/update-email");
+        Injector phoneNumberChangeInjector = new Injector(new UpdatePhoneNumberHandler(TXMA_ENABLED_CONFIGURATION_SERVICE), "/update-phone-number");
         FakeAPI.startServer(new ArrayList<>(Arrays.asList(passwordChangeInjector, emailChangeInjector, phoneNumberChangeInjector)));
     }
 
@@ -55,16 +53,20 @@ public class PactIntegrationTest extends HandlerIntegrationTest {
         context.setTarget(new HttpTestTarget("localhost", PORT));
     }
 
-    @State("API server is healthy") // with existing user
+    @State("API server is healthy")
     void setHealthyServer() {
 
     }
 
-//    @State("API server is not healthy") // with existing user
-//    void setNotHealthyServer() {
-//        // how can we achieve this?
-//    }
+    @State("API server is healthy and OTP code does not exists")
+    void saveOTPCode() {
 
+    }
+
+    @State("API server is healthy and OTP code exists")
+    void doNothing() {
+        redis.savePhoneNumberCode(TEST_EMAIL, "123456", 300); //this is the code to be used in the incoming request
+    }
 
     @TestTemplate
     @ExtendWith(PactVerificationInvocationContextProvider.class)

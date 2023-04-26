@@ -9,7 +9,7 @@ public class Injector {
     private final RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> handler;
     private final String endpoint;
 
-    public Injector(UpdatePasswordHandler handler, String endpoint){
+    public Injector(RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> handler, String endpoint){
         this.endpoint = endpoint;
         this.handler = handler;
     }
