@@ -193,15 +193,22 @@ public class RedisExtension
         return code;
     }
 
+    public void saveEmailCode(String email, String otpCode, long codeExpiryTime) {
+        codeStorageService.saveOtpCode(email, otpCode, codeExpiryTime, VERIFY_EMAIL);
+        System.out.print("code " + otpCode + " saved");
+
+    }
+
+    public void savePhoneNumberCode(String email, String otpCode, long codeExpiryTime) {
+        codeStorageService.saveOtpCode(email, otpCode, codeExpiryTime, VERIFY_PHONE_NUMBER);
+        System.out.print("code " + otpCode + " saved");
+    }
+
     public String generateAndSavePhoneNumberCode(String email, long codeExpiryTime) {
         var code = new CodeGeneratorService().sixDigitCode();
         codeStorageService.saveOtpCode(email, code, codeExpiryTime, VERIFY_PHONE_NUMBER);
 
         return code;
-    }
-
-    public void savePhoneNumberCode(String email, String otpCode, long codeExpiryTime) {
-        codeStorageService.saveOtpCode(email, otpCode, codeExpiryTime, VERIFY_PHONE_NUMBER);
     }
 
     public String generateAndSaveMfaCode(String email, long codeExpiryTime) {

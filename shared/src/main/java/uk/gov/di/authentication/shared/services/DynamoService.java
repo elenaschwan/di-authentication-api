@@ -167,11 +167,8 @@ public class DynamoService implements AuthenticationService {
 
     @Override
     public UserProfile getUserProfileByEmail(String email) {
-        var response =
-                dynamoUserProfileTable.getItem(
-                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
-        LOG.info(response);
-        return response;
+        return dynamoUserProfileTable.getItem(
+                Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
     }
 
     @Override

@@ -53,19 +53,52 @@ class PactIntegrationTest extends HandlerIntegrationTest {
         context.setTarget(new HttpTestTarget("localhost", PORT));
     }
 
-    @State("API server is healthy")
-    void setHealthyServer() {
-
+    @State("Email code 000000 does not exists")
+    void doNotSaveThisEmailCode() {
+        // this is currently achieved by sending the request with a different code then the one below... maybe not robust enough
     }
 
-    @State("API server is healthy and OTP code does not exists")
-    void saveOTPCode() {
-
+    @State("Phone number code 000000 does not exists")
+    void doNotSaveThisPhoneCode() {
+        // this is currently achieved by sending the request with a different code then the one below... maybe not robust enough
     }
 
-    @State("API server is healthy and OTP code exists")
-    void doNothing() {
+    @State("Email code 654321 exists")
+    void saveEmailOtpCode(){
+        System.out.println("running this state method");
+        //redis.saveEmailCode(TEST_EMAIL, "654321", 300); //this is the code to be used in the incoming request
+        redis.saveEmailCode("myNewEmail@mail.com", "654321", 300); //this is the code to be used in the incoming request
+    }
+
+    @State("Phone number code 123456 exists")
+    void savePhoneOtpCode() {
         redis.savePhoneNumberCode(TEST_EMAIL, "123456", 300); //this is the code to be used in the incoming request
+    }
+
+    @State("nonExistingUser@mail.com user does not exist")
+    void doNotCreateThisUser() {
+
+    }
+
+    //this will need to be removed
+    @State("Base state: user testEmail@mail.com with password: password-1 exists")
+    void thisUserIsCreatedInMainTestMethod() {
+
+    }
+
+    @State("User's current phone number is 07742682930")
+    void setTestUserPhoneNumber(){
+        userStore.addPhoneNumber(TEST_EMAIL, "07742682930");
+    }
+
+    @State("New email (alreadyTakenEmail@email.com) is already assigned to another user")
+    void createUserWithEmail(){
+        userStore.signUp("alreadyTakenEmail@email.com", "password-2", new Subject());
+    }
+
+    @State("New email (newTestEmail@mail.com) is not assigned to another user")
+    void doNotCreateUserForThisEmail(){
+
     }
 
     @TestTemplate
