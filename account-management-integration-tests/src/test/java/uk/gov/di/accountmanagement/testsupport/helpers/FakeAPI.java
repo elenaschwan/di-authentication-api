@@ -92,7 +92,7 @@ class WrapperHandler implements HttpHandler {
 
         apiGatewayProxyRequestEvent
                 .getRequestContext()
-                .setAuthorizer(Map.of("principalId", requestHeaders.get("publicSubjectID").get(0)));
+                .setAuthorizer(Map.of("principalId", requestHeaders.get("publicSubjectID").get(0), "clientId", "tester-client-id"));
 
         System.out.println("BODY FROM AG FORMED REQUEST");
         System.out.println(apiGatewayProxyRequestEvent.getBody());
@@ -124,8 +124,5 @@ class WrapperHandler implements HttpHandler {
             os.flush();
             os.close();
         }
-
-
-
     }
 }

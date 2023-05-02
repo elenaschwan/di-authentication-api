@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.api.extension.ExtendWith;
+import uk.gov.di.accountmanagement.lambda.SendOtpNotificationHandler;
 import uk.gov.di.accountmanagement.lambda.UpdateEmailHandler;
 import uk.gov.di.accountmanagement.lambda.UpdatePasswordHandler;
 import uk.gov.di.accountmanagement.lambda.UpdatePhoneNumberHandler;
@@ -45,7 +46,8 @@ class PactIntegrationTest extends HandlerIntegrationTest {
         Injector passwordChangeInjector = new Injector(new UpdatePasswordHandler(TXMA_ENABLED_CONFIGURATION_SERVICE), "/update-password");
         Injector emailChangeInjector = new Injector(new UpdateEmailHandler(TXMA_ENABLED_CONFIGURATION_SERVICE), "/update-email");
         Injector phoneNumberChangeInjector = new Injector(new UpdatePhoneNumberHandler(TXMA_ENABLED_CONFIGURATION_SERVICE), "/update-phone-number");
-        FakeAPI.startServer(new ArrayList<>(Arrays.asList(passwordChangeInjector, emailChangeInjector, phoneNumberChangeInjector)));
+        Injector sendOtpNotificationInjector = new Injector(new SendOtpNotificationHandler(TXMA_ENABLED_CONFIGURATION_SERVICE), "/send-otp-notification");
+        FakeAPI.startServer(new ArrayList<>(Arrays.asList(passwordChangeInjector, emailChangeInjector, phoneNumberChangeInjector, sendOtpNotificationInjector)));
     }
 
     @BeforeEach
@@ -88,6 +90,7 @@ class PactIntegrationTest extends HandlerIntegrationTest {
 
     @State("User's current phone number is 07742682930")
     void setTestUserPhoneNumber(){
+        System.out.println("giving the test user phone number: 07742682930");
         userStore.addPhoneNumber(TEST_EMAIL, "07742682930");
     }
 
