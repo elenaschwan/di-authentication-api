@@ -152,6 +152,7 @@ public class DynamoService implements AuthenticationService {
                                         .partitionValue(email.toLowerCase(Locale.ROOT))
                                         .build())
                         .withPhoneNumber(formattedPhoneNumber));
+        LOG.debug("is this failing?");
     }
 
     @Override

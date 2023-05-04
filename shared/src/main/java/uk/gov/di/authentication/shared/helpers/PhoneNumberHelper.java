@@ -14,10 +14,16 @@ public class PhoneNumberHelper {
     public static String formatPhoneNumber(String phoneNumber) {
         var phoneUtil = PhoneNumberUtil.getInstance();
         try {
+            System.out.println(phoneNumber);
             var parsedPhoneNumber = phoneUtil.parse(phoneNumber, "GB");
+            System.out.println(
+                    "parsed phone number"
+            );
             return phoneUtil.format(parsedPhoneNumber, PhoneNumberUtil.PhoneNumberFormat.E164);
+
         } catch (NumberParseException e) {
-            LOG.warn("Error when trying to parse phone number");
+            e.printStackTrace();
+            LOG.warn("Error when trying to parse phone number " + phoneNumber);
             throw new RuntimeException(e);
         }
     }

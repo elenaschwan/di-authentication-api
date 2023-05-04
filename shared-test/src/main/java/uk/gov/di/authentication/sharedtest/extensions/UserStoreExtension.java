@@ -98,7 +98,9 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
     }
 
     public void addPhoneNumber(String email, String phoneNumber) {
+        System.out.println("HERE");
         dynamoService.updatePhoneNumber(email, phoneNumber);
+        System.out.println("updated phone number");
         dynamoService.updatePhoneNumberAndAccountVerifiedStatus(email, true);
     }
 

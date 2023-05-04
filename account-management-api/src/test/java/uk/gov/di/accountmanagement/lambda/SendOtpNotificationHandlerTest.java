@@ -293,6 +293,24 @@ class SendOtpNotificationHandlerTest {
     }
 
     @Test
+    void shouldReturn400IfPhoneNumberIsInvalidWith() {
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of());
+        event.setRequestContext(eventContext);
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"+0000000000\" }",
+                        TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, "12345"));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1012));
+
+        verifyNoInteractions(auditService);
+    }
+
+    @Test
     void shouldReturn400IfNewPhoneNumberIsTheSameAsCurrentPhoneNumber() {
         when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
                 .thenReturn(

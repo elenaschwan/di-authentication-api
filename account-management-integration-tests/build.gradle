@@ -58,7 +58,7 @@ def getGitBranch = { ->
 test {
     useJUnitPlatform()
     filter {
-        includeTestsMatching "PactIntegrationTest"
+        includeTestsMatching "*"
     }
     systemProperty 'pact.provider.version', getGitHash()
     systemProperty 'pact.provider.tag', getGitBranch()

@@ -90,8 +90,9 @@ class PactIntegrationTest extends HandlerIntegrationTest {
 
     @State("User's current phone number is 07742682930")
     void setTestUserPhoneNumber(){
-        System.out.println("giving the test user phone number: 07742682930");
-        userStore.addPhoneNumber(TEST_EMAIL, "07742682930");
+//        System.out.println("giving the test user phone number: 07742682930");
+//        userStore.addPhoneNumber(TEST_EMAIL, "07742682930");
+//        System.out.println(userStore.getPhoneNumberForUser(TEST_EMAIL));
     }
 
     @State("New email (alreadyTakenEmail@email.com) is already assigned to another user")
@@ -108,6 +109,7 @@ class PactIntegrationTest extends HandlerIntegrationTest {
     @ExtendWith(PactVerificationInvocationContextProvider.class)
     void testMethod(PactVerificationContext context, HttpRequest request) {
         String publicSubjectID = userStore.signUp(TEST_EMAIL, CURRENT_PASSWORD, SUBJECT);
+        userStore.addPhoneNumber(TEST_EMAIL, "07742682930");
         System.out.println(publicSubjectID);
         request.addHeader("publicSubjectID", publicSubjectID);
         context.verifyInteraction();

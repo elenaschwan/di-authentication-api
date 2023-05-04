@@ -40,8 +40,10 @@ public class ValidationHelper {
 
     public static Optional<ErrorResponse> validatePhoneNumber(
             String currentPhoneNumber, String newPhoneNumber, String environment) {
+        LOG.debug("checking if new number is same as old number " + newPhoneNumber + " " + currentPhoneNumber);
         if (Objects.nonNull(currentPhoneNumber)
                 && currentPhoneNumber.equals(PhoneNumberHelper.formatPhoneNumber(newPhoneNumber))) {
+            LOG.debug("new phone number is the same as old phone number: " + newPhoneNumber + " " + currentPhoneNumber);
             return Optional.of(ErrorResponse.ERROR_1044);
         }
         return validatePhoneNumber(newPhoneNumber, environment, false);
@@ -81,6 +83,8 @@ public class ValidationHelper {
             LOG.warn("Invalid phone number: failed isValidNumber check");
             return Optional.of(ErrorResponse.ERROR_1012);
         } catch (NumberParseException e) {
+            LOG.warn("printing stack trace");
+            e.printStackTrace();
             LOG.warn("Invalid phone number: parsing failure");
             return Optional.of(ErrorResponse.ERROR_1012);
         }

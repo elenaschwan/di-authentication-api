@@ -1,6 +1,7 @@
 package uk.gov.di.accountmanagement.api;
 
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -139,8 +140,11 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
     }
 
     @Test
-    void shouldReturn400WhenPhoneNumberIsInvalid() throws Json.JsonException {
-        String badPhoneNumber = "This is not a valid phone number";
+    void shouldReturn400WhenPhoneNumberIsInvalidWithExistingUser() throws Json.JsonException {
+        String badPhoneNumber = "+0000000000";
+        String password = "password-1";
+        userStore.signUp(TEST_EMAIL, password);
+        userStore.addPhoneNumber(TEST_EMAIL, "07742682930");
 
         var response =
                 makeRequest(

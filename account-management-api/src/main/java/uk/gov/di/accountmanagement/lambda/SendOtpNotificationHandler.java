@@ -185,6 +185,7 @@ public class SendOtpNotificationHandler
                                     existingPhoneNumber,
                                     sendNotificationRequest.getPhoneNumber(),
                                     configurationService.getEnvironment());
+                    System.out.println(phoneNumberValidationError);
                     if (phoneNumberValidationError.isPresent()) {
                         return generateApiGatewayProxyErrorResponse(
                                 400, phoneNumberValidationError.get());
