@@ -22,7 +22,7 @@ public class FakeAPI {
 
     public static void startServer(ArrayList<Injector> endpointList) throws IOException {
         HttpServer server = HttpServer.create(new InetSocketAddress(5050), 0);
-        endpointList.forEach((item) -> server.createContext(item.getEndpoint(), new WrapperHandler(item.getHandler())));
+        endpointList.forEach((injector) -> server.createContext(injector.getEndpoint(), new WrapperHandler(injector)));
         server.setExecutor(null); // creates a default executor
         server.start();
     }
@@ -30,8 +30,12 @@ public class FakeAPI {
 
 class WrapperHandler implements HttpHandler {
     private final RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> handler;
-    public WrapperHandler(RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent>  h){
-        this.handler = h;
+    private final Map<Integer, String> pathParamsFromInjector;
+
+    public WrapperHandler(Injector injector){
+        this.handler = injector.getHandler();
+        this.pathParamsFromInjector = injector.getPathParams();
+
     }
 
     @Override
@@ -71,11 +75,26 @@ class WrapperHandler implements HttpHandler {
         return tempMap;
     }
 
+    private Map<String, String> getPathParameters(String requestURL){
+        HashMap<String, String> stringStringHashMap = new HashMap<>();
+        String[] pathArr = requestURL.split("/");
+        System.out.println("CHECKING IF ANY PATH PARAMS: " + Arrays.toString(pathArr));
+        if (pathParamsFromInjector.isEmpty() || pathArr.length <= 1) return stringStringHashMap;
+        System.out.println("FOUND PATH PARAMS");
+        pathParamsFromInjector.keySet()
+                .forEach(key -> stringStringHashMap.put(pathParamsFromInjector.get(key), pathArr[key]));
+        return stringStringHashMap;
+    }
+
     private APIGatewayProxyRequestEvent translateRequest(HttpExchange request) throws IOException {
 
         String requestBody = IOUtils.toString(request.getRequestBody(), StandardCharsets.UTF_8);
         System.out.println("BODY FROM ORIGINAL REQUEST");
         System.out.println(requestBody);
+
+        String requestPath = request.getRequestURI().getPath();
+
+        System.out.println(requestPath);
 
         Headers requestHeaders = request.getRequestHeaders();
 
@@ -86,6 +105,7 @@ class WrapperHandler implements HttpHandler {
                         .withBody(requestBody)
                         .withHeaders(getHeaderMap(requestHeaders))
                         .withHttpMethod(request.getRequestMethod())
+                        .withPathParameters(getPathParameters(requestPath))//need to add path params
                         .withRequestContext(
                                 new APIGatewayProxyRequestEvent.ProxyRequestContext()
                                         .withRequestId(requestId));

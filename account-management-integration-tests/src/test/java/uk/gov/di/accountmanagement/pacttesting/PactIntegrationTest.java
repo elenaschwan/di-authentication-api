@@ -43,11 +43,11 @@ class PactIntegrationTest extends HandlerIntegrationTest {
 
     @BeforeAll
     static void startServer() throws IOException {
-        Injector passwordChangeInjector = new Injector(new UpdatePasswordHandler(TXMA_ENABLED_CONFIGURATION_SERVICE), "/update-password");
-        Injector emailChangeInjector = new Injector(new UpdateEmailHandler(TXMA_ENABLED_CONFIGURATION_SERVICE), "/update-email");
-        Injector phoneNumberChangeInjector = new Injector(new UpdatePhoneNumberHandler(TXMA_ENABLED_CONFIGURATION_SERVICE), "/update-phone-number");
-        Injector sendOtpNotificationInjector = new Injector(new SendOtpNotificationHandler(TXMA_ENABLED_CONFIGURATION_SERVICE), "/send-otp-notification");
-        FakeAPI.startServer(new ArrayList<>(Arrays.asList(passwordChangeInjector, emailChangeInjector, phoneNumberChangeInjector, sendOtpNotificationInjector)));
+        Injector passwordChangeInjector = new Injector(new UpdatePasswordHandler(TXMA_ENABLED_CONFIGURATION_SERVICE), "/update-password", "/");
+        Injector emailChangeInjector = new Injector(new UpdateEmailHandler(TXMA_ENABLED_CONFIGURATION_SERVICE), "/update-email", "/");
+        Injector phoneNumberChangeInjector = new Injector(new UpdatePhoneNumberHandler(TXMA_ENABLED_CONFIGURATION_SERVICE), "/update-phone-number", "/");
+        Injector sendOtpNotificationInjector = new Injector(new SendOtpNotificationHandler(TXMA_ENABLED_CONFIGURATION_SERVICE), "/send-otp-notification", "/");
+        FakeAPI.startServer(new ArrayList<>(Arrays.asList(passwordChangeInjector, emailChangeInjector, sendOtpNotificationInjector, phoneNumberChangeInjector)));
     }
 
     @BeforeEach
@@ -68,7 +68,6 @@ class PactIntegrationTest extends HandlerIntegrationTest {
     @State("Email code 654321 exists")
     void saveEmailOtpCode(){
         System.out.println("running this state method");
-        //redis.saveEmailCode(TEST_EMAIL, "654321", 300); //this is the code to be used in the incoming request
         redis.saveEmailCode("myNewEmail@mail.com", "654321", 300); //this is the code to be used in the incoming request
     }
 
