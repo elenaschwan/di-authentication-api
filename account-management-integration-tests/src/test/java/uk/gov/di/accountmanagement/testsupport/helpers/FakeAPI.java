@@ -10,6 +10,8 @@ import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 
 import org.apache.commons.io.IOUtils;
+import software.amazon.awssdk.services.sqs.endpoints.internal.Value;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
@@ -35,9 +37,7 @@ class WrapperHandler implements HttpHandler {
     public WrapperHandler(Injector injector){
         this.handler = injector.getHandler();
         this.pathParamsFromInjector = injector.getPathParams();
-
     }
-
     @Override
     public void handle(HttpExchange exchange) throws IOException {
 
@@ -86,6 +86,21 @@ class WrapperHandler implements HttpHandler {
         return stringStringHashMap;
     }
 
+    private Map<String, String> getQueryStringParams(String queryString){
+        System.out.println(queryString);
+        HashMap<String, String> stringStringHashMap = new HashMap<>();
+        String[] arr = queryString.split("[&=]");
+        if (arr.length < 2 || arr.length % 2 != 0) {
+            System.out.println("query params possibly malformed");
+            System.out.println(Arrays.toString(arr));
+        }
+        for (int i = 0; i < arr.length-1; i+=2){
+            System.out.println("adding query params: " + arr[i] + " " + arr[i+1]);
+            stringStringHashMap.put(arr[i], arr[i+1]);
+        }
+        return stringStringHashMap;
+    }
+
     private APIGatewayProxyRequestEvent translateRequest(HttpExchange request) throws IOException {
 
         String requestBody = IOUtils.toString(request.getRequestBody(), StandardCharsets.UTF_8);
@@ -105,10 +120,14 @@ class WrapperHandler implements HttpHandler {
                         .withBody(requestBody)
                         .withHeaders(getHeaderMap(requestHeaders))
                         .withHttpMethod(request.getRequestMethod())
-                        .withPathParameters(getPathParameters(requestPath))//need to add path params
+                        .withPathParameters(getPathParameters(requestPath))
                         .withRequestContext(
                                 new APIGatewayProxyRequestEvent.ProxyRequestContext()
                                         .withRequestId(requestId));
+        String requestQuery = request.getRequestURI().getQuery();
+        System.out.println("query retrieved: " + requestQuery);
+
+        if (requestQuery != null) apiGatewayProxyRequestEvent.setQueryStringParameters(getQueryStringParams(requestQuery));
 
         apiGatewayProxyRequestEvent
                 .getRequestContext()

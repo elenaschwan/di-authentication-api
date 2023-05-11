@@ -7,19 +7,7 @@ import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
-import uk.gov.di.authentication.sharedtest.extensions.AccountRecoveryStoreExtension;
-import uk.gov.di.authentication.sharedtest.extensions.AuditSnsTopicExtension;
-import uk.gov.di.authentication.sharedtest.extensions.ClientStoreExtension;
-import uk.gov.di.authentication.sharedtest.extensions.CommonPasswordsExtension;
-import uk.gov.di.authentication.sharedtest.extensions.DocumentAppCredentialStoreExtension;
-import uk.gov.di.authentication.sharedtest.extensions.IdentityStoreExtension;
-import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
-import uk.gov.di.authentication.sharedtest.extensions.ParameterStoreExtension;
-import uk.gov.di.authentication.sharedtest.extensions.RedisExtension;
-import uk.gov.di.authentication.sharedtest.extensions.SnsTopicExtension;
-import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
-import uk.gov.di.authentication.sharedtest.extensions.TokenSigningExtension;
-import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
+import uk.gov.di.authentication.sharedtest.extensions.*;
 
 import java.net.HttpCookie;
 import java.util.HashMap;
@@ -139,7 +127,8 @@ public abstract class HandlerIntegrationTest<Q, S> {
     protected static final RedisExtension redis =
             new RedisExtension(SerializationService.getInstance(), TEST_CONFIGURATION_SERVICE);
 
-    @RegisterExtension public static final UserStoreExtension userStore = new UserStoreExtension();
+    @RegisterExtension
+    protected static final UserStoreExtension userStore = new UserStoreExtension();
 
     @RegisterExtension
     protected static final ClientStoreExtension clientStore = new ClientStoreExtension();

@@ -32,12 +32,10 @@ import org.apache.http.HttpRequest;
         host = "localhost",
         port = "8080",
         authentication = @PactBrokerAuth(username = "test", password = "test"))
+
 class PactIntegrationTest extends HandlerIntegrationTest {
-
     private static final String TEST_EMAIL = "testEmail@mail.com";
-
     private static final String CURRENT_PASSWORD = "password-1";
-
     private static final Subject SUBJECT = new Subject();
     private static final int PORT = 5050;
 
@@ -51,7 +49,7 @@ class PactIntegrationTest extends HandlerIntegrationTest {
     }
 
     @BeforeEach
-    void setup(PactVerificationContext context) {
+    void pactSetup(PactVerificationContext context) {
         context.setTarget(new HttpTestTarget("localhost", PORT));
     }
 
@@ -89,9 +87,6 @@ class PactIntegrationTest extends HandlerIntegrationTest {
 
     @State("User's current phone number is 07742682930")
     void setTestUserPhoneNumber(){
-//        System.out.println("giving the test user phone number: 07742682930");
-//        userStore.addPhoneNumber(TEST_EMAIL, "07742682930");
-//        System.out.println(userStore.getPhoneNumberForUser(TEST_EMAIL));
     }
 
     @State("New email (alreadyTakenEmail@email.com) is already assigned to another user")

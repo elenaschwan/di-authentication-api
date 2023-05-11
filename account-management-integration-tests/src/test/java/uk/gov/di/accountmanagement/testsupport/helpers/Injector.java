@@ -3,9 +3,9 @@ package uk.gov.di.accountmanagement.testsupport.helpers;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import software.amazon.awssdk.services.sqs.endpoints.internal.Value;
 
 import java.util.HashMap;
+import java.util.Map;
 
 public class Injector {
     private final RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> handler;
@@ -13,9 +13,10 @@ public class Injector {
 
     private final String pathDescription;
 
-    private HashMap<Integer, String> pathParams;
+    private final Map<Integer, String> pathParams;
 
-    private APIGatewayProxyRequestEvent.ProxyRequestContext requestContext;
+    private final Map<String, Object> authorizer;
+
 
     public Injector(RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> handler, String endpoint, String pathDescription){
         this.endpoint = endpoint;
@@ -23,19 +24,16 @@ public class Injector {
         this.pathDescription = pathDescription;
         this.pathParams = new HashMap<>();
         this.findPathParams();
-
+        this.authorizer = new HashMap<>();
     }
 
-    public Injector(RequestHandler<APIGatewayProxyRequestEvent,
-            APIGatewayProxyResponseEvent> handler,
-                    String endpoint, String pathDescription,
-                    APIGatewayProxyRequestEvent.ProxyRequestContext requestContext){
+    public Injector(RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> handler, String endpoint, String pathDescription, Map<String, Object> authorizer){
         this.endpoint = endpoint;
         this.handler = handler;
         this.pathDescription = pathDescription;
-        this.requestContext = requestContext;
         this.pathParams = new HashMap<>();
         this.findPathParams();
+        this.authorizer = authorizer;
     }
 
     public RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> getHandler() {
@@ -46,11 +44,11 @@ public class Injector {
         return endpoint;
     }
 
-    public String getPathDescription() { return pathDescription; }
-
-    public HashMap<Integer, String> getPathParams(){
+    public Map<Integer, String> getPathParams(){
         return this.pathParams;
     }
+
+    public Map<String, Object> getAuthorizer() { return this.authorizer; }
 
     private void findPathParams(){
         String[] arr = pathDescription.split("/");
