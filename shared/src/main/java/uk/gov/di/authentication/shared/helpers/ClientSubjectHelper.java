@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.shared.helpers;
 
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.openid.connect.sdk.SubjectType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jose4j.base64url.Base64Url;
@@ -11,12 +10,9 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 
 import java.net.URI;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
-import java.util.List;
 import java.util.stream.Collectors;
 
 import static com.nimbusds.openid.connect.sdk.SubjectType.PUBLIC;
@@ -25,30 +21,6 @@ public class ClientSubjectHelper {
 
     private static final Logger LOG = LogManager.getLogger(ClientSubjectHelper.class);
     private static final String PAIRWISE_PREFIX = "urn:fdc:gov.uk:2022:";
-
-    public static void main(String[] args) {
-
-        String argSubjectId = args[0];
-        String argSaltBinary = args[1];
-        String redirectUrl = args[2];
-
-        System.out.println(argSubjectId);
-        System.out.println(argSaltBinary);
-        System.out.println(redirectUrl);
-        System.out.println("-----");
-
-        UserProfile userProfile =
-                new UserProfile()
-                        .withSubjectID(argSubjectId)
-                        .withSalt(ByteBuffer.wrap(Base64.getDecoder().decode(argSaltBinary)));
-        ClientRegistry clientRegistry =
-                new ClientRegistry()
-                        .withSubjectType(SubjectType.PAIRWISE.toString())
-                        .withRedirectUrls(List.of(redirectUrl));
-
-        Subject subject = getSubject(userProfile, clientRegistry, null, null);
-        System.out.println(subject.getValue());
-    }
 
     private static byte[] getSalt(UserProfile userProfile) {
         return SdkBytes.fromByteBuffer(userProfile.getSalt()).asByteArray();
